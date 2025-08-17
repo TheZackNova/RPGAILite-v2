@@ -348,16 +348,9 @@ class PartyDebugger {
     }
 
     private setupGlobalErrorHandler(): void {
-        const originalError = console.error;
-        console.error = (...args) => {
-            if (args.some(arg => typeof arg === 'string' && arg.includes('party'))) {
-                this.log('ERROR', '❌ Party-related error detected', {
-                    error: args.join(' '),
-                    timestamp: Date.now()
-                });
-            }
-            originalError.apply(console, args);
-        };
+        // Removed global console.error override to prevent React internal conflicts
+        // Party-related errors will be logged through explicit calls instead
+        // This prevents interference with React's static flag system
     }
 
     // Public API for external access

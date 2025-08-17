@@ -274,6 +274,12 @@ export class EnhancedRAGSystem {
         for (const [name, entity] of Object.entries(knownEntities)) {
             if (Array.isArray(party) && party.some(p => p.name === name)) continue;
             
+            // Skip lore and concept entities - they're handled by enhanced custom rules
+            if (entity.type === 'lore' || entity.type === 'concept') {
+                console.log(`🚫 Skipping ${entity.type} entity "${name}" - covered by custom rules`);
+                continue;
+            }
+            
             let score = 0;
             const reasons: string[] = [];
             
@@ -440,7 +446,11 @@ export class EnhancedRAGSystem {
         
         // Add remaining entities with detailed info
         const remainingBudget = tokenBudget - usedTokens;
-        const nonPartyEntities = entities.filter(e => e.entity.type !== 'companion');
+        const nonPartyEntities = entities.filter(e => 
+            e.entity.type !== 'companion' && 
+            e.entity.type !== 'lore' && 
+            e.entity.type !== 'concept'
+        );
         const tokensPerEntity = Math.floor(remainingBudget / Math.max(1, nonPartyEntities.length));
         
         nonPartyEntities.forEach(({ entity, score, reason }) => {

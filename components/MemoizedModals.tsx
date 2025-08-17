@@ -605,6 +605,7 @@ const MemoizedModalsComponent = ({
 
             {/* Game Content Modals */}
             <MemoryModal 
+                key="memory-modal"
                 isOpen={isMemoryModalOpen} 
                 onClose={modalCloseHandlers.memory} 
                 memories={memories} 
@@ -619,6 +620,7 @@ const MemoizedModalsComponent = ({
             />
             
             <KnowledgeBaseModal 
+                key="knowledge-modal"
                 isOpen={isKnowledgeModalOpen} 
                 onClose={modalCloseHandlers.knowledge} 
                 pc={entityComputations.pcEntity} 
@@ -628,6 +630,7 @@ const MemoizedModalsComponent = ({
             />
             
             <EnhancedCustomRulesModal 
+                key="custom-rules-modal"
                 isOpen={isCustomRulesModalOpen} 
                 onClose={modalCloseHandlers.customRules} 
                 onSave={handleSaveRules} 

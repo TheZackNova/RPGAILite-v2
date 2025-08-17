@@ -20,7 +20,7 @@ export class ReferenceIdGenerator {
         }
         
         // Convert to positive hex and add prefix
-        const hashHex = Math.abs(hash).toString(16).padStart(8, '0');
+        const hashHex = Math.abs(hash).toString(16).padStart(8, '0').toUpperCase();
         const typePrefix = this.getTypePrefix(type);
         const categoryPrefix = this.getCategoryPrefix(category || this.getCategoryFromType(type));
         

@@ -2,6 +2,7 @@ import React, { useState, useRef, useContext } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIContext } from '../App.tsx';
 import type { FormData, CustomRule } from './types.ts';
+import { RuleLogic } from './types.ts';
 import { RuleHelpers } from './utils/RuleHelpers.ts';
 import { SuggestionModal } from './SuggestionModal.tsx';
 import { FormLabel, CustomSelect, SuggestButton } from './FormControls.tsx';
@@ -109,15 +110,15 @@ export const CreateWorld: React.FC<{
         setFormData(prev => ({ ...prev, customRules: prev.customRules.filter(r => r.id !== id) }));
     };
 
-    const handleRuleChange = (id: string, field: 'content' | 'title', value: string) => {
+    const handleRuleChange = (id: string, updates: Partial<CustomRule>) => {
         setFormData(prev => ({ 
             ...prev, 
             customRules: prev.customRules.map(r => {
                 if (r.id === id) {
-                    const updated = { ...r, [field]: value };
+                    const updated = { ...r, ...updates };
                     // Auto-estimate token weight if content changed
-                    if (field === 'content') {
-                        updated.tokenWeight = RuleHelpers.estimateTokenWeight(value);
+                    if (updates.content !== undefined) {
+                        updated.tokenWeight = RuleHelpers.estimateTokenWeight(updated.content);
                     }
                     return updated;
                 }
@@ -126,8 +127,167 @@ export const CreateWorld: React.FC<{
         }));
     };
 
+    // Enhanced keyword parsing that supports phrases with or without quotes/brackets
+    const parseKeywords = (text: string): string[] => {
+        if (!text.trim()) return [];
+        
+        const keywords: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        let inBrackets = false;
+        let quoteChar = '';
+        
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            
+            // Handle quotes for phrases
+            if ((char === '"' || char === "'" || char === '`') && !inBrackets) {
+                if (!inQuotes) {
+                    inQuotes = true;
+                    quoteChar = char;
+                    continue;
+                } else if (char === quoteChar) {
+                    inQuotes = false;
+                    quoteChar = '';
+                    if (current.trim()) {
+                        keywords.push(current.trim());
+                        current = '';
+                    }
+                    continue;
+                }
+            }
+            
+            // Handle brackets for phrases
+            if (char === '[' && !inQuotes) {
+                inBrackets = true;
+                continue;
+            }
+            if (char === ']' && !inQuotes) {
+                inBrackets = false;
+                if (current.trim()) {
+                    keywords.push(current.trim());
+                    current = '';
+                }
+                continue;
+            }
+            
+            // Handle separators (comma, semicolon) - these always separate keywords
+            if ((char === ',' || char === ';') && !inQuotes && !inBrackets) {
+                if (current.trim()) {
+                    keywords.push(current.trim());
+                    current = '';
+                }
+                continue;
+            }
+            
+            // Enhanced handling: if we encounter multiple spaces or newlines outside quotes/brackets,
+            // treat it as a separator for better phrase detection
+            if (/\s/.test(char)) {
+                if (inQuotes || inBrackets) {
+                    // Inside quotes/brackets, preserve all whitespace
+                    current += char;
+                } else {
+                    // Outside quotes/brackets, use intelligent spacing
+                    const nextNonSpace = text.slice(i + 1).search(/\S/);
+                    const nextChar = nextNonSpace >= 0 ? text[i + 1 + nextNonSpace] : '';
+                    
+                    // If next non-whitespace is a separator or end of string, finish current keyword
+                    if (nextChar === ',' || nextChar === ';' || nextNonSpace === -1) {
+                        if (current.trim()) {
+                            keywords.push(current.trim());
+                            current = '';
+                        }
+                        continue;
+                    }
+                    
+                    // If we have multiple consecutive spaces/newlines, treat as separator
+                    const remainingText = text.slice(i);
+                    const multipleSpaces = /^\s{2,}/.test(remainingText) || /\n/.test(remainingText);
+                    
+                    if (multipleSpaces && current.trim()) {
+                        keywords.push(current.trim());
+                        current = '';
+                        // Skip all whitespace
+                        while (i + 1 < text.length && /\s/.test(text[i + 1])) {
+                            i++;
+                        }
+                        continue;
+                    }
+                    
+                    // Single space - add to current keyword (for phrases)
+                    if (current.trim()) {
+                        current += char;
+                    }
+                }
+                continue;
+            }
+            
+            // Add character to current keyword
+            current += char;
+        }
+        
+        // Add final keyword if exists
+        if (current.trim()) {
+            keywords.push(current.trim());
+        }
+        
+        // Filter and limit keywords
+        return keywords
+            .filter(keyword => keyword.length > 0)
+            .filter(keyword => keyword.length <= 100) // Allow longer phrases
+            .slice(0, 20); // Limit to max 20 keywords per field
+    };
+
+    // Helper function to format keywords for display - add quotes around phrases with spaces
+    const formatKeywords = (keywords: string[] | undefined): string => {
+        if (!keywords || keywords.length === 0) return '';
+        
+        return keywords.map(keyword => {
+            // If keyword contains spaces, wrap in quotes for clarity
+            if (keyword.includes(' ')) {
+                return `"${keyword}"`;
+            }
+            return keyword;
+        }).join(', ');
+    };
+
+    // Smart paste handler for keywords that auto-formats pasted content
+    const handleKeywordPaste = (e: React.ClipboardEvent<HTMLInputElement>, ruleId: string, field: 'keywords' | 'secondaryKeywords') => {
+        e.preventDefault();
+        const pastedText = e.clipboardData.getData('text');
+        
+        if (!pastedText.trim()) return;
+        
+        // Get current input value
+        const currentValue = e.currentTarget.value;
+        const cursorPos = e.currentTarget.selectionStart || 0;
+        
+        // Parse the pasted text into keywords
+        let processedText = pastedText;
+        
+        // If pasted text contains newlines or multiple spaces, clean it up
+        if (/\n/.test(pastedText) || /\s{2,}/.test(pastedText)) {
+            const lines = pastedText.split('\n').map(line => line.trim()).filter(line => line);
+            processedText = lines.join(', ');
+        }
+        
+        // If pasted text looks like a single phrase (contains spaces but no commas/separators)
+        // and doesn't already have quotes, add them
+        if (processedText.includes(' ') && !processedText.includes(',') && !processedText.includes(';') 
+            && !processedText.includes('"') && !processedText.includes("'") && !processedText.includes('[')) {
+            processedText = `"${processedText.trim()}"`;
+        }
+        
+        // Insert the processed text at cursor position
+        const newValue = currentValue.slice(0, cursorPos) + processedText + currentValue.slice(cursorPos);
+        
+        // Parse and update the rule
+        const parsed = parseKeywords(newValue);
+        handleRuleChange(ruleId, { [field]: parsed });
+    };
+
     const handleToggleActive = (id: string, newIsActive: boolean) => {
-        setFormData(prev => ({ ...prev, customRules: prev.customRules.map(r => r.id === id ? { ...r, isActive: newIsActive } : r) }));
+        handleRuleChange(id, { isActive: newIsActive });
     };
 
     // --- Realm System Management Functions ---
@@ -591,39 +751,204 @@ QUAN TRỌNG: BẮT BUỘC sử dụng 100% tiếng Việt. TUYỆT ĐỐI KHÔN
                         Ví dụ: "Tạo ra một thanh kiếm tên là 'Hỏa Long Kiếm' có khả năng phun lửa."
                     </p>
                      {formData.customRules.map((rule, index) => (
-                        <div key={rule.id} className="bg-slate-200/50 dark:bg-[#373c5a]/50 p-3 rounded-lg border border-slate-300 dark:border-slate-600 space-y-2">
-                            <input
-                                type="text"
-                                value={rule.title || ''}
-                                onChange={(e) => handleRuleChange(rule.id, 'title', e.target.value)}
-                                placeholder={`Tiêu đề luật #${index + 1}...`}
-                                className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm font-medium text-slate-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                             <textarea
-                                value={rule.content}
-                                onChange={(e) => handleRuleChange(rule.id, 'content', e.target.value)}
-                                placeholder={`Nội dung luật #${index + 1}...`}
-                                className="w-full h-24 bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y"
-                            />
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-4">
-                                    <label htmlFor={`rule-toggle-${rule.id}`} className="flex items-center cursor-pointer">
-                                        <input
-                                            id={`rule-toggle-${rule.id}`}
-                                            type="checkbox"
-                                            checked={rule.isActive}
-                                            onChange={(e) => handleToggleActive(rule.id, e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-400 bg-gray-700 text-purple-600 focus:ring-purple-500"
-                                        />
-                                        <span className="ml-2 text-sm text-slate-700 dark:text-gray-300">Hoạt động</span>
+                        <div key={rule.id} className="bg-slate-200/50 dark:bg-[#373c5a]/50 p-4 rounded-lg border border-slate-300 dark:border-slate-600 space-y-4">
+                            {/* Title and Content */}
+                            <div className="space-y-3">
+                                <input
+                                    type="text"
+                                    value={rule.title || ''}
+                                    onChange={(e) => handleRuleChange(rule.id, { title: e.target.value })}
+                                    placeholder={`Tiêu đề luật #${index + 1}...`}
+                                    className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm font-medium text-slate-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                                <textarea
+                                    value={rule.content}
+                                    onChange={(e) => handleRuleChange(rule.id, { content: e.target.value })}
+                                    placeholder={`Nội dung luật #${index + 1}...`}
+                                    className="w-full h-24 bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y"
+                                />
+                            </div>
+
+                            {/* Keywords */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">
+                                        Từ khóa chính (hỗ trợ cụm từ tự động, phân cách bằng dấu phẩy):
+                                        {rule.keywords && rule.keywords.length > 0 && (
+                                            <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                                ({rule.keywords.length} từ khóa)
+                                            </span>
+                                        )}
                                     </label>
-                                    {rule.order && rule.order !== 100 && (
-                                        <span className="text-xs text-slate-600 dark:text-slate-400">
-                                            Độ ưu tiên: {rule.order}
-                                        </span>
+                                    <input
+                                        type="text"
+                                        value={formatKeywords(rule.keywords)}
+                                        onChange={(e) => {
+                                            const parsed = parseKeywords(e.target.value);
+                                            handleRuleChange(rule.id, { keywords: parsed });
+                                        }}
+                                        onPaste={(e) => handleKeywordPaste(e, rule.id, 'keywords')}
+                                        placeholder="VD: chiến đấu, pháp thuật mạnh, kiếm thuật cao cấp"
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">
+                                        Từ khóa phụ (tùy chọn):
+                                        {rule.secondaryKeywords && rule.secondaryKeywords.length > 0 && (
+                                            <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                                                ({rule.secondaryKeywords.length} từ khóa)
+                                            </span>
+                                        )}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formatKeywords(rule.secondaryKeywords)}
+                                        onChange={(e) => {
+                                            const parsed = parseKeywords(e.target.value);
+                                            handleRuleChange(rule.id, { secondaryKeywords: parsed });
+                                        }}
+                                        onPaste={(e) => handleKeywordPaste(e, rule.id, 'secondaryKeywords')}
+                                        placeholder="VD: phòng thủ, thuật phòng thủ cao cấp"
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Advanced Options */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">Luật Logic</label>
+                                    <select
+                                        value={rule.logic || RuleLogic.AND_ANY}
+                                        onChange={(e) => handleRuleChange(rule.id, { logic: parseInt(e.target.value) as RuleLogic })}
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    >
+                                        <option value={RuleLogic.AND_ANY}>Bất kỳ từ khóa nào (ANY)</option>
+                                        <option value={RuleLogic.AND_ALL}>Tất cả từ khóa (ALL)</option>
+                                        <option value={RuleLogic.NOT_ALL}>Không phải tất cả (NOT ALL)</option>
+                                        <option value={RuleLogic.NOT_ANY}>Không có từ khóa nào (NOT ANY)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">Độ ưu tiên</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="1000"
+                                        value={rule.order || 100}
+                                        onChange={(e) => handleRuleChange(rule.id, { order: parseInt(e.target.value) || 100 })}
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">Xác suất (%)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={rule.probability || 100}
+                                        onChange={(e) => handleRuleChange(rule.id, { probability: parseInt(e.target.value) || 100 })}
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Additional Settings */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">Độ sâu quét</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="20"
+                                        value={rule.scanDepth || 5}
+                                        onChange={(e) => handleRuleChange(rule.id, { scanDepth: parseInt(e.target.value) || 5 })}
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-1">Danh mục</label>
+                                    <select
+                                        value={rule.category || 'general'}
+                                        onChange={(e) => handleRuleChange(rule.id, { category: e.target.value })}
+                                        className="w-full bg-slate-100 dark:bg-[#1f2238] border border-slate-300 dark:border-slate-500 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    >
+                                        <option value="general">📋 Tổng quát</option>
+                                        <option value="combat">⚔️ Chiến đấu</option>
+                                        <option value="social">👥 Xã hội</option>
+                                        <option value="exploration">🗺️ Khám phá</option>
+                                        <option value="story">📖 Cốt truyện</option>
+                                        <option value="items">🎒 Vật phẩm</option>
+                                        <option value="skills">⭐ Kỹ năng</option>
+                                        <option value="world">🌍 Thế giới</option>
+                                        <option value="worldinfo">🌐 WorldInfo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Checkboxes */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={rule.alwaysActive || false}
+                                        onChange={(e) => handleRuleChange(rule.id, { alwaysActive: e.target.checked })}
+                                        className="h-4 w-4 rounded border-gray-400 bg-gray-700 text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Luôn hoạt động
+                                    </span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={rule.caseSensitive || false}
+                                        onChange={(e) => handleRuleChange(rule.id, { caseSensitive: e.target.checked })}
+                                        className="h-4 w-4 rounded border-gray-400 bg-gray-700 text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Phân biệt hoa thường
+                                    </span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={rule.matchWholeWords || false}
+                                        onChange={(e) => handleRuleChange(rule.id, { matchWholeWords: e.target.checked })}
+                                        className="h-4 w-4 rounded border-gray-400 bg-gray-700 text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Khớp từ đầy đủ
+                                    </span>
+                                </label>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={rule.isActive}
+                                        onChange={(e) => handleToggleActive(rule.id, e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-400 bg-gray-700 text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+                                        Kích hoạt
+                                    </span>
+                                </label>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex justify-between items-center pt-2 border-t border-slate-300 dark:border-slate-500">
+                                <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                                    {rule.tokenWeight && (
+                                        <span>Tokens: ~{rule.tokenWeight}</span>
+                                    )}
+                                    {rule.activationCount && (
+                                        <span>Kích hoạt: {rule.activationCount}</span>
                                     )}
                                 </div>
-                                <button onClick={() => handleDeleteRule(rule.id)} className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors">
+                                <button 
+                                    onClick={() => handleDeleteRule(rule.id)} 
+                                    className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded-md text-xs font-semibold transition-colors"
+                                >
                                     Xóa
                                 </button>
                             </div>

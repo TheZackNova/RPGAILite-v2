@@ -257,8 +257,6 @@ export class RuleActivationEngine {
      * Process all rules and return activated ones
      */
     processRules(rules: CustomRule[], context: ActivationContext): ActivationResult {
-        console.log(`🔄 Processing ${rules.length} rules with context`);
-        
         const activated: ActivatedRule[] = [];
         const skipped: CustomRule[] = [];
         let totalTokens = 0;
@@ -269,8 +267,18 @@ export class RuleActivationEngine {
         const activeRules = rules
             .filter(rule => rule.isActive)
             .sort((a, b) => (b.order || 0) - (a.order || 0)); // Higher order first
+        
+        const inactiveRules = rules.filter(rule => !rule.isActive);
+        const alwaysActiveRules = activeRules.filter(rule => rule.alwaysActive);
+        const keywordBasedRules = activeRules.filter(rule => !rule.alwaysActive);
 
-        console.log(`📋 ${activeRules.length} active rules to process`);
+        console.log(`🔄 Rule Processing Started:
+        📊 Total Rules: ${rules.length}
+        ✅ Active Rules: ${activeRules.length}
+        ❌ Inactive Rules: ${inactiveRules.length}
+        🌟 Always Active: ${alwaysActiveRules.length}
+        🔑 Keyword-Based: ${keywordBasedRules.length}
+        💰 Token Budget: ${tokenBudget}`);
 
         for (const rule of activeRules) {
             try {
@@ -319,7 +327,8 @@ export class RuleActivationEngine {
                 );
 
                 if (!logicResult.activated) {
-                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: ${logicResult.reason}`);
+                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: ${logicResult.reason} | Primary: [${primaryMatch.matchedKeywords.join(', ')}] | Secondary: [${secondaryMatch.matchedKeywords.join(', ')}]`);
+                    skipped.push(rule);
                     continue;
                 }
 
@@ -365,7 +374,26 @@ export class RuleActivationEngine {
         // Sort activated rules by priority (higher first)
         activated.sort((a, b) => b.priority - a.priority);
 
-        console.log(`🎯 Activation complete: ${activated.length} rules activated, ${totalTokens} tokens used`);
+        // Enhanced debug summary
+        const totalRules = rules.length;
+        const inactiveCount = inactiveRules.length;
+        const processedRules = activeRules.length;
+        const nonActivatedRules = processedRules - activated.length;
+        
+        console.log(`🎯 Activation Summary:
+        📊 Total Rules: ${totalRules}
+        ❌ Inactive Rules: ${inactiveCount}
+        🔄 Processed Rules: ${processedRules}
+        ✅ Activated Rules: ${activated.length}
+        ⏭️ Skipped Rules: ${nonActivatedRules}
+        💰 Token Usage: ${totalTokens}/${tokenBudget} (${((totalTokens/tokenBudget)*100).toFixed(1)}%)`);
+        
+        if (activated.length > 0) {
+            console.log(`🔥 Activated: ${activated.map(a => a.rule.title || a.rule.id).join(', ')}`);
+        }
+        if (skipped.length > 0) {
+            console.log(`⏭️ Skipped: ${skipped.map(r => r.title || r.id).join(', ')}`);
+        }
 
         return {
             activatedRules: activated,

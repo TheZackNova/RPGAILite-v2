@@ -45,6 +45,13 @@ Special Instructions
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 
+### Testing Commands
+
+- `npm test` - Run tests in watch mode
+- `npm run test:run` - Run tests once
+- `npm run test:ui` - Open Vitest UI for interactive testing
+- `npm run test:coverage` - Run tests with coverage report
+
 ## Environment Setup
 
 - Create `.env.local` file with `GEMINI_API_KEY` for Google Gemini AI integration
@@ -134,4 +141,28 @@ This is an AI-powered RPG text-based game simulator built with React and Google 
 - Strict TypeScript configuration with experimental decorators
 - React 19 with modern hooks patterns
 - TailwindCSS for styling with PostCSS
-- No lint/test commands configured - manual code review required
+
+### Testing Framework
+
+**Vitest Setup:**
+- **Framework**: Vitest with jsdom environment for React component testing
+- **Testing Library**: React Testing Library for component interaction testing
+- **Coverage**: V8 coverage provider with HTML reports
+- **Mock Support**: Built-in mocking for localStorage, Google Gemini AI API
+
+**Test Structure:**
+- Unit tests: `*.test.ts` - For utility functions and business logic
+- Component tests: `*.test.tsx` - For React components
+- Setup file: `src/test/setup.ts` - Global test configuration and mocks
+
+**Key Testing Utilities:**
+- Entity creation and manipulation testing
+- Component rendering and interaction testing
+- API mocking for AI integration
+- Vietnamese text handling validation
+
+**Example Test Locations:**
+- `components/utils/ReferenceIdGenerator.test.ts` - ID generation testing
+- `components/types.test.ts` - Type validation and creation
+- `components/MainMenu.test.tsx` - UI component testing
+- `components/handlers/entityHandlers.test.ts` - Game logic testing
