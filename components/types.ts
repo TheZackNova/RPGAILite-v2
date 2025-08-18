@@ -84,6 +84,10 @@ export interface CustomRule {
   lastActivated?: number;          // Last activation turn
   activationCount?: number;        // Total activation count
   category?: string;               // Rule category for organization
+  
+  // UI state for raw input handling
+  rawKeywords?: string;            // Temporary storage for keyword input before parsing
+  rawSecondaryKeywords?: string;   // Temporary storage for secondary keyword input before parsing
 }
 
 export interface RealmTier {

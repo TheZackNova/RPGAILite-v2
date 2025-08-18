@@ -281,9 +281,13 @@ export const CreateWorld: React.FC<{
         // Insert the processed text at cursor position
         const newValue = currentValue.slice(0, cursorPos) + processedText + currentValue.slice(cursorPos);
         
-        // Parse and update the rule
+        // Parse and update the rule immediately for paste operations
         const parsed = parseKeywords(newValue);
-        handleRuleChange(ruleId, { [field]: parsed });
+        const rawFieldName = field === 'keywords' ? 'rawKeywords' : 'rawSecondaryKeywords';
+        handleRuleChange(ruleId, { 
+            [field]: parsed,
+            [rawFieldName]: undefined // Clear raw input since we're processing immediately
+        });
     };
 
     const handleToggleActive = (id: string, newIsActive: boolean) => {
@@ -782,10 +786,17 @@ QUAN TRỌNG: BẮT BUỘC sử dụng 100% tiếng Việt. TUYỆT ĐỐI KHÔN
                                     </label>
                                     <input
                                         type="text"
-                                        value={formatKeywords(rule.keywords)}
+                                        value={rule.rawKeywords ?? formatKeywords(rule.keywords)}
                                         onChange={(e) => {
+                                            // Store raw input to allow normal typing
+                                            handleRuleChange(rule.id, { rawKeywords: e.target.value });
+                                        }}
+                                        onBlur={(e) => {
                                             const parsed = parseKeywords(e.target.value);
-                                            handleRuleChange(rule.id, { keywords: parsed });
+                                            handleRuleChange(rule.id, { 
+                                                keywords: parsed,
+                                                rawKeywords: undefined // Clear raw input after processing
+                                            });
                                         }}
                                         onPaste={(e) => handleKeywordPaste(e, rule.id, 'keywords')}
                                         placeholder="VD: chiến đấu, pháp thuật mạnh, kiếm thuật cao cấp"
@@ -803,10 +814,17 @@ QUAN TRỌNG: BẮT BUỘC sử dụng 100% tiếng Việt. TUYỆT ĐỐI KHÔN
                                     </label>
                                     <input
                                         type="text"
-                                        value={formatKeywords(rule.secondaryKeywords)}
+                                        value={rule.rawSecondaryKeywords ?? formatKeywords(rule.secondaryKeywords)}
                                         onChange={(e) => {
+                                            // Store raw input to allow normal typing
+                                            handleRuleChange(rule.id, { rawSecondaryKeywords: e.target.value });
+                                        }}
+                                        onBlur={(e) => {
                                             const parsed = parseKeywords(e.target.value);
-                                            handleRuleChange(rule.id, { secondaryKeywords: parsed });
+                                            handleRuleChange(rule.id, { 
+                                                secondaryKeywords: parsed,
+                                                rawSecondaryKeywords: undefined // Clear raw input after processing
+                                            });
                                         }}
                                         onPaste={(e) => handleKeywordPaste(e, rule.id, 'secondaryKeywords')}
                                         placeholder="VD: phòng thủ, thuật phòng thủ cao cấp"
