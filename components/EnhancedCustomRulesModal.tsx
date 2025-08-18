@@ -892,41 +892,82 @@ export const EnhancedCustomRulesModal: React.FC<EnhancedCustomRulesModalProps> =
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-slate-50/80 dark:bg-[#1f2238]/80 rounded-b-lg flex justify-between items-center flex-shrink-0">
-                    <div className="flex items-center space-x-2">
-                        <button 
-                            onClick={handleSaveRulesToFile} 
-                            className="px-3 py-2 bg-green-700 hover:bg-green-600 rounded-md text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
-                        >
-                            <SaveIcon className="w-4 h-4"/> Xuất File
-                        </button>
-                        <button 
-                            onClick={handleLoadRulesClick} 
-                            className="px-3 py-2 bg-sky-600 hover:bg-sky-500 rounded-md text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
-                        >
-                            <FileIcon className="w-4 h-4"/> Nhập File
-                        </button>
-                        <button 
-                            onClick={handleLoadWorldInfoClick} 
-                            className="px-3 py-2 bg-purple-700 hover:bg-purple-600 rounded-md text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
-                        >
-                            <DocumentAddIcon className="w-4 h-4"/> Nhập WorldInfo
-                        </button>
+                <div className="p-3 sm:p-4 bg-slate-50/80 dark:bg-[#1f2238]/80 rounded-b-lg flex-shrink-0">
+                    {/* Mobile Layout - Stack vertically */}
+                    <div className="flex flex-col space-y-3 sm:hidden">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button 
+                                onClick={handleSaveRulesToFile} 
+                                className="px-2 py-1.5 bg-green-700 hover:bg-green-600 rounded-md text-white text-xs font-semibold transition-colors duration-200 flex items-center gap-1"
+                            >
+                                <SaveIcon className="w-3 h-3"/> Xuất
+                            </button>
+                            <button 
+                                onClick={handleLoadRulesClick} 
+                                className="px-2 py-1.5 bg-sky-600 hover:bg-sky-500 rounded-md text-white text-xs font-semibold transition-colors duration-200 flex items-center gap-1"
+                            >
+                                <FileIcon className="w-3 h-3"/> Nhập
+                            </button>
+                            <button 
+                                onClick={handleLoadWorldInfoClick} 
+                                className="px-2 py-1.5 bg-purple-700 hover:bg-purple-600 rounded-md text-white text-xs font-semibold transition-colors duration-200 flex items-center gap-1"
+                            >
+                                <DocumentAddIcon className="w-3 h-3"/> WorldInfo
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={onClose} 
+                                className="flex-1 px-3 py-2 bg-slate-600 hover:bg-slate-500 rounded-md text-white text-sm font-semibold transition-colors duration-200"
+                            >
+                                Hủy
+                            </button>
+                            <button 
+                                onClick={handleSave} 
+                                className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-md text-white text-sm font-semibold transition-colors duration-200"
+                            >
+                                Lưu ({rules.filter(r => r.isActive).length})
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                        <button 
-                            onClick={onClose} 
-                            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md text-white text-sm font-semibold transition-colors duration-200"
-                        >
-                            Hủy
-                        </button>
-                        <button 
-                            onClick={handleSave} 
-                            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md text-white text-sm font-semibold transition-colors duration-200"
-                        >
-                            Lưu Thay Đổi ({rules.filter(r => r.isActive).length} hoạt động)
-                        </button>
+                    {/* Desktop Layout - Side by side */}
+                    <div className="hidden sm:flex justify-between items-center w-full">
+                        <div className="flex items-center space-x-2">
+                            <button 
+                                onClick={handleSaveRulesToFile} 
+                                className="px-3 py-2 bg-green-700 hover:bg-green-600 rounded-md text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
+                            >
+                                <SaveIcon className="w-4 h-4"/> Xuất File
+                            </button>
+                            <button 
+                                onClick={handleLoadRulesClick} 
+                                className="px-3 py-2 bg-sky-600 hover:bg-sky-500 rounded-md text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
+                            >
+                                <FileIcon className="w-4 h-4"/> Nhập File
+                            </button>
+                            <button 
+                                onClick={handleLoadWorldInfoClick} 
+                                className="px-3 py-2 bg-purple-700 hover:bg-purple-600 rounded-md text-white text-sm font-semibold transition-colors duration-200 flex items-center gap-2"
+                            >
+                                <DocumentAddIcon className="w-4 h-4"/> Nhập WorldInfo
+                            </button>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <button 
+                                onClick={onClose} 
+                                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-md text-white text-sm font-semibold transition-colors duration-200"
+                            >
+                                Hủy
+                            </button>
+                            <button 
+                                onClick={handleSave} 
+                                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-md text-white text-sm font-semibold transition-colors duration-200"
+                            >
+                                Lưu Thay Đổi ({rules.filter(r => r.isActive).length} hoạt động)
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
