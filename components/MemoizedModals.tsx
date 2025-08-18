@@ -794,6 +794,6 @@ const MemoizedModalsComponent = ({
     );
 };
 
-// Export memoized version
-export const MemoizedModals = memo(MemoizedModalsComponent);
+// Export memoized version with proper typing for React 19
+export const MemoizedModals = memo<MemoizedModalsProps>(MemoizedModalsComponent);
 MemoizedModals.displayName = 'MemoizedModals';

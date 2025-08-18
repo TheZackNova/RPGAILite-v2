@@ -334,8 +334,8 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
     );
 };
 
-// Export memoized version
-export const KnowledgeBaseModal = memo(KnowledgeBaseModalComponent);
+// Export memoized version with proper typing for React 19
+export const KnowledgeBaseModal = memo<KnowledgeBaseModalProps>(KnowledgeBaseModalComponent);
 KnowledgeBaseModal.displayName = 'KnowledgeBaseModal';
 
 // Component for individual entity list items
@@ -395,8 +395,8 @@ const EntityListItemComponent = ({ entity, category, knownEntities, isBookmarked
     );
 };
 
-// Export memoized version
-const EntityListItem = memo(EntityListItemComponent);
+// Export memoized version with proper typing
+const EntityListItem = memo<EntityListItemProps>(EntityListItemComponent);
 EntityListItem.displayName = 'EntityListItem';
 
 // Virtualized list component for large entity lists
@@ -455,6 +455,6 @@ const VirtualizedEntityListComponent = ({ entities, category, knownEntities, boo
     );
 };
 
-// Export memoized version
-const VirtualizedEntityList = memo(VirtualizedEntityListComponent);
+// Export memoized version with proper typing
+const VirtualizedEntityList = memo<VirtualizedEntityListProps>(VirtualizedEntityListComponent);
 VirtualizedEntityList.displayName = 'VirtualizedEntityList';

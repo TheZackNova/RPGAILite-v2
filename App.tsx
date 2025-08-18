@@ -749,34 +749,9 @@ Mô tả ngoại hình phải phù hợp với bối cảnh và tính cách, t�
       setInitCurrentStep('Đang phân tích quy tắc tùy chỉnh...');
       setInitSubStep('');
       
-      console.log('🎮 StartNewGame: Kiểm tra quy tắc tùy chỉnh...');
-      if (customRules && customRules.length > 0 && ai && isAiReady) {
-          const activeRules = customRules.filter(rule => rule.isActive);
-          console.log('🎮 StartNewGame: Tìm thấy quy tắc đang active:', activeRules.length);
-          if (activeRules.length > 0) {
-              try {
-                  setInitProgress(60);
-                  setInitCurrentStep('Đang tạo khái niệm thế giới...');
-                  setInitSubStep(`Xử lý ${activeRules.length} quy tắc tùy chỉnh`);
-                  
-                  console.log('🎮 StartNewGame: Đang tạo LORE_CONCEPT...');
-                  console.log('🎮 StartNewGame: Động lực PC trước LORE_CONCEPT:', initialEntities[pcEntity.name]?.motivation);
-                  const conceptEntities = await generateLoreConcepts(activeRules);
-                  console.log('🎮 StartNewGame: LORE_CONCEPT đã tạo, số lượng:', Object.keys(conceptEntities).length);
-                  console.log('🎮 StartNewGame: Tên thực thể concept:', Object.keys(conceptEntities));
-                  console.log('🎮 StartNewGame: Concepts có chứa tên PC không?', conceptEntities.hasOwnProperty(pcEntity.name));
-                  initialEntities = { ...initialEntities, ...conceptEntities };
-                  console.log('🎮 StartNewGame: Động lực PC sau khi merge LORE_CONCEPT:', initialEntities[pcEntity.name]?.motivation);
-                  
-              } catch (error) {
-                  console.error('🎮 StartNewGame: Không thể tạo LORE_CONCEPT:', error);
-              }
-          } else {
-              console.log('🎮 StartNewGame: Không tìm thấy quy tắc active nào');
-          }
-      } else {
-          console.log('🎮 StartNewGame: Bỏ qua tạo LORE_CONCEPT - customRules:', !!customRules, 'length:', customRules?.length, 'ai:', !!ai, 'isAiReady:', isAiReady);
-      }
+      console.log('🎮 StartNewGame: Bỏ qua tạo LORE_CONCEPT tự động để giữ câu chuyện mở đầu sạch sẽ');
+      // LORE_CONCEPT generation is disabled during initial game creation to keep the opening story clean
+      // Custom rules and concepts will be activated during regular gameplay through the RAG system
 
       setInitProgress(80);
       setInitCurrentStep('Đang thiết lập trạng thái game...');
