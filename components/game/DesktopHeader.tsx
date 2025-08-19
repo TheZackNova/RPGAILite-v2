@@ -18,9 +18,6 @@ interface DesktopHeaderProps {
     onKnowledge: () => void;
     onMemory: () => void;
     onRestart: () => void;
-    onPCInfo: () => void;
-    onParty: () => void;
-    onQuests: () => void;
     onInventory: () => void;
     onAdmin: () => void;
     onManualCleanup: () => void;
@@ -39,7 +36,7 @@ const getTokenColor = (tokens: number) => {
 };
 export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
     onHome, onSettings, onImport, onSave, onExportWorldSetup, onMap, onRules, onRegexManager, onKnowledge, onMemory, onRestart,
-    onPCInfo, onParty, onQuests, onInventory, onAdmin, hasActiveQuests, onManualCleanup,
+    onInventory, onAdmin, hasActiveQuests, onManualCleanup,
     worldData, gameTime, turnCount, currentTurnTokens, totalTokens
 }) => {
     const [showGameMenu, setShowGameMenu] = React.useState(false);
@@ -223,18 +220,8 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                         ...getDropdownPosition(playerButtonRef, true)
                     }}
                 >
-                    <button onClick={() => { onPCInfo(); setShowPlayerMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                        <UserIcon className="w-4 h-4" /> Thông tin
-                    </button>
                     <button onClick={() => { onInventory(); setShowPlayerMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
                         🎒 Túi Đồ
-                    </button>
-                    <button onClick={() => { onParty(); setShowPlayerMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                        <GameIcons.NpcIcon className="w-4 h-4" /> Tổ đội
-                    </button>
-                    <button onClick={() => { onQuests(); setShowPlayerMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 relative text-slate-700 dark:text-slate-200">
-                        <GameIcons.ScrollIcon className="w-4 h-4" /> Nhiệm vụ
-                        {hasActiveQuests && <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>}
                     </button>
                 </div>,
                 document.body

@@ -19,11 +19,7 @@ interface SidebarNavProps {
     onKnowledge: () => void;
     onMemory: () => void;
     onRestart: () => void;
-    onPCInfo: () => void;
-    onParty: () => void;
-    onQuests: () => void;
     onAdmin: () => void;
-    hasActiveQuests: boolean;
     currentTurnTokens: number;
     totalTokens: number;
     historyStats: {
@@ -43,7 +39,7 @@ interface SidebarNavProps {
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({ 
     isOpen, onClose, onHome, onSettings, onImport, onSave, onExportWorldSetup, onMap, onRules, onRegexManager, onKnowledge, onMemory, onRestart, 
-    onPCInfo, onParty, onQuests, onAdmin, hasActiveQuests, currentTurnTokens, totalTokens,
+    onAdmin, currentTurnTokens, totalTokens,
     historyStats, compressedSegments, gameHistory, cleanupStats, onManualCleanup
 }) => {
     const handleNavigation = (action: () => void) => {
@@ -72,14 +68,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                     <button onClick={() => handleNavigation(onMemory)} className="flex items-center text-left w-full px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded"><MemoryIcon className="w-5 h-5 mr-3" /> Ký Ức</button>
                     <button onClick={() => handleNavigation(onAdmin)} className="flex items-center text-left w-full px-3 py-2 bg-purple-600/80 hover:bg-purple-500 rounded text-white">⚙️ <span className="ml-3">Admin Panel</span></button>
                     <button onClick={() => handleNavigation(onRestart)} className="flex items-center text-left w-full px-3 py-2 bg-red-600/80 hover:bg-red-500 rounded text-white"><RefreshIcon className="w-5 h-5 mr-3" /> Bắt Đầu Lại</button>
-                    <div className="border-t border-slate-300 dark:border-slate-700 pt-4 mt-4 space-y-3">
-                        <button onClick={() => handleNavigation(onPCInfo)} className="flex items-center text-left w-full px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded"><UserIcon className="w-5 h-5 mr-3" /> Thông tin</button>
-                        <button onClick={() => handleNavigation(onParty)} className="flex items-center text-left w-full px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded"><GameIcons.NpcIcon className="w-5 h-5 mr-3" /> Tổ đội</button>
-                        <button onClick={() => handleNavigation(onQuests)} className="relative flex items-center text-left w-full px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded">
-                            <GameIcons.ScrollIcon className="w-5 h-5 mr-3" /> Nhiệm vụ
-                            {hasActiveQuests && <span className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center rounded-full bg-yellow-500 text-white"><ExclamationIcon className="w-3 h-3" /></span>}
-                        </button>
-                    </div>
                 </nav>
                 <div className="mt-2 pt-2 border-t border-slate-400 dark:border-slate-600">
     <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">

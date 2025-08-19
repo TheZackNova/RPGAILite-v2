@@ -3,6 +3,24 @@ import type { ChangelogEntry } from '../types.ts';
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.45.0',
+    date: '2025-08-19',
+    changes: [
+      { type: 'feature', text: 'Desktop UI Redesign với Combined Story Panel - Thiết kế lại hoàn toàn giao diện desktop với CombinedStoryPanel mới kết hợp story display (60% phía trên) và action choices (40% phía dưới) thành một cửa sổ chính. Layout được tối ưu hóa theo tỷ lệ 60:40 (story:status) để tối đa hóa không gian đọc câu chuyện.' },
+      { type: 'feature', text: 'Integrated StatusPanel với Tabbed Interface - Tạo StatusPanel thay thế cho Action Panel với 3 tabs chính: "👤 Nhân vật" (thông tin PC đầy đủ như PlayerCharacterSheet), "🤝 Đồng đội" (party members), và "📋 Nhiệm vụ" (quest tracking). Tích hợp hoàn toàn thông tin character sheet bao gồm stats, appearance, realm, experience, fame, personality, MBTI, motivation, skills, statuses và inventory.' },
+      { type: 'feature', text: 'Comprehensive Character Information Display - StatusPanel hiển thị đầy đủ thông tin như original PlayerCharacterSheet: basic info (name, gender, age, location, appearance), enhanced stats (realm với color highlighting, experience với number formatting, fame với color-coded levels), personality traits (external/MBTI/motivation), skills system (learned skills và regular skills), current statuses với duration, và inventory management.' },
+      { type: 'improvement', text: 'Streamlined Header Interface - Loại bỏ các buttons PlayerCharacterSheet, Party, và Quests khỏi desktop header và sidebar navigation. Chỉ giữ lại essential controls trong header, tạo interface sạch sẽ hơn với việc truy cập thông tin player được tích hợp vào StatusPanel.' },
+      { type: 'improvement', text: 'Preserved Mobile Experience - Giữ nguyên hoàn toàn mobile UI experience với original StoryPanel và ActionPanel layout. Mobile users tiếp tục sử dụng design được yêu thích với functionality đầy đủ, trong khi desktop users được hưởng lợi từ layout mới được tối ưu hóa.' },
+      { type: 'improvement', text: 'Responsive Design System - Implement dual-layout system với mobile layout (grid-based với original components) và desktop layout (flexbox-based với combined components). Seamless responsive behavior không có conflicts giữa hai layouts, đảm bảo optimal experience trên mọi device size.' },
+      { type: 'technical', text: 'Component Architecture Refactoring - Tạo CombinedStoryPanel component kết hợp StoryPanel và ActionPanel functionality với virtual scrolling, interactive text support, và action handling. StatusPanel component với tabbed interface, comprehensive character display, và proper state management cho character/party/quest information.' },
+      { type: 'feature', text: 'Floating Drop-up Choices Panel - Thay thế fixed bottom choices section bằng elegant floating dropdown panel. Choices panel hiện là collapsible drop-up từ bottom với toggle button hiển thị số lượng choices available, smooth animations, và auto-collapse sau khi chọn action. Tối ưu hóa screen real estate cho story content.' },
+      { type: 'improvement', text: 'Enhanced Choice Panel Visibility - Cải thiện đáng kể contrast và readability của choice panel với dark slate background (slate-900/95), stronger borders, improved text contrast (text-white), enhanced number badges với shadow effects, và better hover states cho optimal readability.' },
+      { type: 'improvement', text: 'Separated Floating Choice Panel - Tách FloatingChoicePanel thành component riêng biệt và đặt ở vị trí tối ưu để không che khuất nội dung story. Panel được positioned outside của story container, đảm bảo text visibility hoàn toàn trong khi vẫn maintain easy access to choices.' },
+      { type: 'fix', text: 'Story Panel và Status Panel Scrolling Functionality - Khắc phục hoàn toàn lỗi scrolling bị broken trong cả CombinedStoryPanel và StatusPanel. Fixed CSS constraints bằng cách remove `overflow-hidden`, thêm `min-h-0` cho flex containers, và thay `overflow-hidden` bằng `h-full` để enable proper scroll behavior. Updated container height calculation và layout structure để restore full scrolling functionality.' },
+      { type: 'technical', text: 'Enhanced Layout Management - Implement flexbox-based desktop layout với precise 60%/40% proportions thay vì grid system. Mobile layout sử dụng original grid system, desktop layout sử dụng flexbox cho better control over proportions và responsive behavior.' },
+    ],
+  },
+  {
     version: '1.44.0',
     date: '2025-08-17',
     changes: [

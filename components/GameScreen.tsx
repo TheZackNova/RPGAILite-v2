@@ -32,6 +32,9 @@ import { DesktopHeader } from './game/DesktopHeader.tsx';
 import { MobileHeader } from './game/MobileHeader.tsx';
 import { StoryPanel } from './game/StoryPanel.tsx';
 import { ActionPanel } from './game/ActionPanel.tsx';
+import { CombinedStoryPanel } from './game/CombinedStoryPanel.tsx';
+import { StatusPanel } from './game/StatusPanel.tsx';
+import { FloatingChoicePanel } from './game/FloatingChoicePanel.tsx';
 import { SidebarNav } from './game/SidebarNav.tsx';
 import { GameNotifications } from './game/GameNotifications.tsx';
 import { MobileInputFooter } from './game/MobileInputFooter.tsx';
@@ -1124,9 +1127,6 @@ export const GameScreen: React.FC<{
                 onKnowledge={() => setIsKnowledgeModalOpen(true)}
                 onMemory={() => setIsMemoryModalOpen(true)}
                 onRestart={() => setIsRestartModalOpen(true)}
-                onPCInfo={() => setIsPcInfoModalOpen(true)}
-                onParty={() => setIsPartyModalOpen(true)}
-                onQuests={() => setIsQuestLogModalOpen(true)}
                 onAdmin={() => setIsAdminModalOpen(true)}
                 onManualCleanup={handleManualCleanup}
                 currentTurnTokens={currentTurnTokens}
@@ -1151,12 +1151,10 @@ export const GameScreen: React.FC<{
                 onKnowledge={() => setIsKnowledgeModalOpen(true)}
                 onMemory={() => setIsMemoryModalOpen(true)}
                 onRestart={() => setIsRestartModalOpen(true)}
-                onPCInfo={() => setIsPcInfoModalOpen(true)}
-                onParty={() => setIsPartyModalOpen(true)}
-                onQuests={() => setIsQuestLogModalOpen(true)}
                 onInventory={() => setIsInventoryModalOpen(true)}
                 onAdmin={() => setIsAdminModalOpen(true)}
                 onManualCleanup={handleManualCleanup}
+                hasActiveQuests={quests.some(q => q.status === 'active')}
                 worldData={worldData}
                 gameTime={gameTime}
                 turnCount={turnCount}
@@ -1164,7 +1162,8 @@ export const GameScreen: React.FC<{
                 totalTokens={totalTokens}
             />
 
-            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 overflow-hidden p-4 md:p-0">
+            {/* Mobile Layout - Original Design */}
+            <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 overflow-hidden p-4 md:p-0 md:hidden">
                 <StoryPanel
                     storyLog={storyLog}
                     isLoading={isLoading}
@@ -1183,6 +1182,48 @@ export const GameScreen: React.FC<{
                     setCustomAction={setCustomAction}
                     handleSuggestAction={handleSuggestAction}
                     isCustomActionLocked={isCustomActionLocked}
+                />
+            </div>
+
+            {/* Desktop Layout - New Combined Design */}
+            <div className="hidden md:flex flex-grow gap-4 mt-4 relative min-h-0">
+                <div className="flex-grow min-h-0" style={{ flexBasis: '60%' }}>
+                    <CombinedStoryPanel
+                        storyLog={storyLog}
+                        isLoading={isLoading}
+                        isAiReady={isAiReady}
+                        knownEntities={knownEntities}
+                        onEntityClick={handleEntityClick}
+                        apiKeyError={apiKeyError}
+                    />
+                </div>
+                <div className="flex-shrink-0 min-h-0" style={{ flexBasis: '40%' }}>
+                    <StatusPanel
+                        pcEntity={entityComputations.pcEntity}
+                        pcStatuses={entityComputations.pcStatuses}
+                        displayParty={entityComputations.displayParty}
+                        playerInventory={entityComputations.playerInventory}
+                        quests={quests}
+                        knownEntities={knownEntities}
+                        onEntityClick={handleEntityClick}
+                        onStatusClick={handleStatusClick}
+                        onDeleteStatus={handleDeleteStatus}
+                    />
+                </div>
+                
+                {/* Floating Choice Panel - positioned to not block story text */}
+                <FloatingChoicePanel
+                    isAiReady={isAiReady}
+                    apiKeyError={apiKeyError}
+                    isLoading={isLoading}
+                    choices={choices}
+                    handleAction={handleAction}
+                    debouncedHandleAction={debouncedHandleAction}
+                    customAction={customAction}
+                    setCustomAction={setCustomAction}
+                    handleSuggestAction={handleSuggestAction}
+                    isCustomActionLocked={isCustomActionLocked}
+                    className="md:right-[42%]"
                 />
             </div>
             
