@@ -15,10 +15,12 @@ interface MobileInputFooterProps {
     isLoading: boolean;
     isAiReady: boolean;
     isCustomActionLocked: boolean;
+    isHighTokenCooldown?: boolean;
+    cooldownTimeLeft?: number;
 }
 
 export const MobileInputFooter: React.FC<MobileInputFooterProps> = ({
-    onChoicesClick, onInventoryClick, customAction, setCustomAction, handleAction, debouncedHandleAction, handleSuggestAction, isLoading, isAiReady, isCustomActionLocked
+    onChoicesClick, onInventoryClick, customAction, setCustomAction, handleAction, debouncedHandleAction, handleSuggestAction, isLoading, isAiReady, isCustomActionLocked, isHighTokenCooldown = false, cooldownTimeLeft = 0
 }) => {
     // Local state for input to prevent lag
     const [localCustomAction, setLocalCustomAction] = useState(customAction);
@@ -138,10 +140,10 @@ export const MobileInputFooter: React.FC<MobileInputFooterProps> = ({
                     )}
                     <button 
                         onClick={handleSendAction}
-                        disabled={isLoading || !isAiReady || isCustomActionLocked}
+                        disabled={isLoading || !isAiReady || isCustomActionLocked || isHighTokenCooldown}
                         className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-md transition-colors disabled:bg-slate-500"
                     >
-                        Gửi
+                        {isHighTokenCooldown ? `Chờ ${cooldownTimeLeft}s` : 'Gửi'}
                     </button>
                 </div>
             </div>

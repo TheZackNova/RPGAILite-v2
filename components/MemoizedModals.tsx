@@ -140,6 +140,9 @@ interface MemoizedModalsProps {
         displayParty: Entity[];
         playerInventory: Entity[];
     };
+
+    // Cooldown state
+    isHighTokenCooldown?: boolean;
 }
 
 
@@ -539,7 +542,8 @@ const MemoizedModalsComponent = ({
     turnCount,
     locationDiscoveryOrder,
     worldData,
-    entityComputations
+    entityComputations,
+    isHighTokenCooldown = false
 }: MemoizedModalsProps) => {
 
     return (
@@ -698,6 +702,7 @@ const MemoizedModalsComponent = ({
                 onClose={modalCloseHandlers.choices}
                 choices={choices}
                 onAction={handleAction}
+                isHighTokenCooldown={isHighTokenCooldown}
             />
 
             {/* Inventory Modal */}

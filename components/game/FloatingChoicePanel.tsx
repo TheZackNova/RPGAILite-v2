@@ -14,6 +14,8 @@ interface FloatingChoicePanelProps {
     handleSuggestAction: () => void;
     isCustomActionLocked: boolean;
     className?: string;
+    isHighTokenCooldown?: boolean;
+    cooldownTimeLeft?: number;
 }
 
 export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
@@ -27,7 +29,9 @@ export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
     setCustomAction,
     handleSuggestAction,
     isCustomActionLocked,
-    className = ''
+    className = '',
+    isHighTokenCooldown = false,
+    cooldownTimeLeft = 0
 }) => {
     const [isChoicesExpanded, setIsChoicesExpanded] = useState(false);
     
@@ -139,7 +143,12 @@ export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
                                         handleAction(choice);
                                         setIsChoicesExpanded(false);
                                     }}
-                                    className="group w-full text-left p-3 bg-slate-800/60 hover:bg-gradient-to-r hover:from-cyan-500/30 hover:to-blue-500/30 backdrop-blur-sm border border-slate-600/50 hover:border-cyan-400/60 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.01]"
+                                    disabled={isHighTokenCooldown}
+                                    className={`group w-full text-left p-3 bg-slate-800/60 backdrop-blur-sm border border-slate-600/50 rounded-xl transition-all duration-300 shadow-lg ${
+                                        isHighTokenCooldown 
+                                            ? 'opacity-50 cursor-not-allowed' 
+                                            : 'hover:bg-gradient-to-r hover:from-cyan-500/30 hover:to-blue-500/30 hover:border-cyan-400/60 hover:shadow-xl transform hover:scale-[1.01]'
+                                    }`}
                                 >
                                     <div className="flex items-start gap-2">
                                         <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-cyan-500/60 to-blue-500/60 rounded-lg flex items-center justify-center text-white font-bold text-xs group-hover:from-cyan-500/80 group-hover:to-blue-500/80 transition-all duration-300 shadow-sm">
@@ -194,11 +203,11 @@ export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
                         </button>
                         <button 
                             onClick={handleSendAction}
-                            disabled={isLoading || !isAiReady || isCustomActionLocked}
+                            disabled={isLoading || !isAiReady || isCustomActionLocked || isHighTokenCooldown}
                             className="px-4 py-2 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 hover:from-cyan-500/40 hover:to-blue-500/40 border border-cyan-400/40 rounded-xl text-white font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm text-sm"
                             aria-label="Gửi hành động"
                         >
-                            Gửi
+                            {isHighTokenCooldown ? `Chờ ${cooldownTimeLeft}s` : 'Gửi'}
                         </button>
                     </div>
                 </div>

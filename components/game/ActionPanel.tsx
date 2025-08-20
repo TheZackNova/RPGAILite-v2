@@ -13,6 +13,8 @@ interface ActionPanelProps {
     setCustomAction: (action: string) => void;
     handleSuggestAction: () => void;
     isCustomActionLocked: boolean;
+    isHighTokenCooldown?: boolean;
+    cooldownTimeLeft?: number;
 }
 
 export const ActionPanel: React.FC<ActionPanelProps> = ({
@@ -26,6 +28,8 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
     setCustomAction,
     handleSuggestAction,
     isCustomActionLocked,
+    isHighTokenCooldown = false,
+    cooldownTimeLeft = 0,
 }) => {
     // Local state for input to prevent lag
     const [localCustomAction, setLocalCustomAction] = useState(customAction);
@@ -133,7 +137,12 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
                                 <button 
                                     key={index}
                                     onClick={() => handleAction(choice)}
-                                    className="group w-full text-left p-4 bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 backdrop-blur-sm border border-white/20 hover:border-cyan-400/40 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-[1.02]"
+                                    disabled={isHighTokenCooldown}
+                                    className={`group w-full text-left p-4 bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl transition-all duration-300 shadow-lg ${
+                                        isHighTokenCooldown 
+                                            ? 'opacity-50 cursor-not-allowed' 
+                                            : 'hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 hover:border-cyan-400/40 hover:shadow-2xl transform hover:scale-[1.02]'
+                                    }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 rounded-xl flex items-center justify-center text-white font-bold text-sm group-hover:from-cyan-500/50 group-hover:to-blue-500/50 transition-all duration-300">
@@ -196,11 +205,11 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
                     </button>
                     <button 
                         onClick={handleSendAction}
-                        disabled={isLoading || !isAiReady || isCustomActionLocked}
+                        disabled={isLoading || !isAiReady || isCustomActionLocked || isHighTokenCooldown}
                         className="px-6 py-3 bg-gradient-to-r from-cyan-500/30 to-blue-500/30 hover:from-cyan-500/40 hover:to-blue-500/40 border border-cyan-400/40 rounded-xl text-white font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm"
                         aria-label="Gửi hành động"
                     >
-                        Gửi
+                        {isHighTokenCooldown ? `Chờ ${cooldownTimeLeft}s` : 'Gửi'}
                     </button>
                 </div>
             </div>

@@ -6,7 +6,8 @@ export const MobileChoicesModal: React.FC<{
     onClose: () => void;
     choices: string[];
     onAction: (action: string) => void;
-}> = ({ isOpen, onClose, choices, onAction }) => {
+    isHighTokenCooldown?: boolean;
+}> = ({ isOpen, onClose, choices, onAction, isHighTokenCooldown = false }) => {
     if (!isOpen) return null;
 
     return (
@@ -26,7 +27,12 @@ export const MobileChoicesModal: React.FC<{
                                 onAction(choice);
                                 onClose();
                             }}
-                            className="w-full text-left p-3 bg-slate-200 dark:bg-slate-700 hover:bg-purple-600 dark:hover:bg-purple-600 text-slate-800 dark:text-gray-200 hover:text-white rounded-md transition-colors duration-200 shadow-sm border border-slate-300 dark:border-slate-600"
+                            disabled={isHighTokenCooldown}
+                            className={`w-full text-left p-3 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-gray-200 rounded-md transition-colors duration-200 shadow-sm border border-slate-300 dark:border-slate-600 ${
+                                isHighTokenCooldown 
+                                    ? 'opacity-50 cursor-not-allowed' 
+                                    : 'hover:bg-purple-600 dark:hover:bg-purple-600 hover:text-white'
+                            }`}
                         >
                              {choice.match(/^\d+\.\s/) ? choice : `${index + 1}. ${choice}`}
                         </button>

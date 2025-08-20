@@ -35,6 +35,9 @@ export interface GameActionHandlersParams {
     
     // Choice history tracking
     updateChoiceHistory: (choices: string[], selectedChoice?: string, context?: string) => void;
+    
+    // High token usage cooldown
+    triggerHighTokenCooldown: () => void;
 }
 
 export const createGameActionHandlers = (params: GameActionHandlersParams) => {
@@ -44,7 +47,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
-        updateChoiceHistory
+        updateChoiceHistory, triggerHighTokenCooldown
     } = params;
 
     // Create auto-trimmed story log functions
@@ -307,6 +310,7 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                 
                 errorMessage += " Vui lòng thử lại với hành động khác hoặc kiểm tra API key.";
                 
+                // Player action is already in the story log, just add error message
                 storyLogManager.update(prev => [...prev, errorMessage]);
                 return;
             }
@@ -368,13 +372,21 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             }); 
         } catch (error: any) {
             console.error("Error continuing story:", error);
-            setStoryLog(prev => prev.slice(0, -1));
+            
+            // Store the player action before removing it
+            let playerAction = '';
+            setStoryLog(prev => {
+                playerAction = prev[prev.length - 1]; // Get the last entry (player action)
+                return prev.slice(0, -1); // Remove the last entry
+            });
 
             if (!isUsingDefaultKey && userApiKeyCount > 1 && error.toString().includes('429')) {
                 rotateKey();
-                storyLogManager.update(prev => [...prev, "**⭐ Lỗi giới hạn yêu cầu. Đã tự động chuyển sang API Key tiếp theo. Vui lòng thử lại hành động của bạn. ⭐**"]);
+                // Restore player action and add error message
+                storyLogManager.update(prev => [...prev, playerAction, "**⭐ Lỗi giới hạn yêu cầu. Đã tự động chuyển sang API Key tiếp theo. Vui lòng thử lại hành động của bạn. ⭐**"]);
             } else {
-                 storyLogManager.update(prev => [...prev, "Lỗi: AI không thể xử lý yêu cầu. Vui lòng thử một hành động khác."]);
+                // Restore player action and add error message
+                storyLogManager.update(prev => [...prev, playerAction, "Lỗi: AI không thể xử lý yêu cầu. Vui lòng thử một hành động khác."]);
             }
         } finally {
             setIsLoading(false);
@@ -505,6 +517,9 @@ Hãy gợi ý hành động:`;
                     cleanStory;
                 updateChoiceHistory(newChoices, undefined, briefContext);
             }
+            
+            // Trigger cooldown if high token usage
+            triggerHighTokenCooldown();
         } catch (e) {
             console.error("Failed to parse AI response:", e, "Raw response:", text);
             storyLogManager.update(prev => [...prev, "Lỗi: AI trả về dữ liệu không hợp lệ. Hãy thử lại."]);
