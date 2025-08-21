@@ -250,13 +250,14 @@ export const GameScreen: React.FC<{
     // Initialize entity handlers  
     const entityHandlers = useMemo(() => createEntityHandlers({
         knownEntities,
+        party,
         setKnownEntities,
         setActiveEntity,
         setActiveStatus,
         setActiveQuest,
         handleAction: gameActionHandlers.handleAction,
         getCurrentGameState
-    }), [knownEntities, setKnownEntities, gameActionHandlers, getCurrentGameState]);
+    }), [knownEntities, party, setKnownEntities, gameActionHandlers, getCurrentGameState]);
 
     // Initialize game state handlers
     const gameStateHandlers = useMemo(() => createGameStateHandlers({

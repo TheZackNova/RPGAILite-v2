@@ -4,6 +4,7 @@ import type { SaveData } from '../types';
 
 export interface EntityHandlersParams {
     knownEntities: { [key: string]: Entity };
+    party: Entity[];
     setKnownEntities: (updater: (prev: { [key: string]: Entity }) => { [key: string]: Entity }) => void;
     setActiveEntity: (entity: Entity | null) => void;
     setActiveStatus: (status: Status | null) => void;
@@ -15,6 +16,7 @@ export interface EntityHandlersParams {
 export const createEntityHandlers = (params: EntityHandlersParams) => {
     const {
         knownEntities,
+        party,
         setKnownEntities,
         setActiveEntity,
         setActiveStatus,
@@ -24,7 +26,16 @@ export const createEntityHandlers = (params: EntityHandlersParams) => {
     } = params;
 
     const handleEntityClick = (entityName: string) => {
-        setActiveEntity(knownEntities[entityName] || null);
+        // First check knownEntities (NPCs, items, skills, etc.)
+        let entity = knownEntities[entityName];
+        
+        // If not found, check party members (PC and companions)
+        if (!entity) {
+            entity = party.find(member => member.name === entityName);
+        }
+        
+        console.log(`🎯 Entity clicked: "${entityName}", found:`, !!entity, entity ? `(type: ${entity.type})` : '(not found)');
+        setActiveEntity(entity || null);
     };
 
     const handleUseItem = (itemName: string) => {
