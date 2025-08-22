@@ -227,14 +227,28 @@ export class RuleActivationEngine {
             scanText += context.aiResponse + ' ';
         }
 
-        // Game history
+        // Game history - Only scan last 3 AI responses for keyword matching
         if (context.gameHistory && context.gameHistory.length > 0) {
-            const recentHistory = context.gameHistory.slice(-depth);
-            for (const entry of recentHistory) {
-                if (entry.type === 'user_action' && rule.scanPlayerInput !== false) {
-                    scanText += entry.content + ' ';
-                } else if (entry.type === 'ai_response' && rule.scanAIOutput !== false) {
-                    scanText += entry.content + ' ';
+            if (rule.scanAIOutput !== false) {
+                // Extract only AI responses (model role) from history
+                const aiResponses = context.gameHistory
+                    .filter(entry => entry.role === 'model')
+                    .slice(-3); // Only last 3 AI responses
+                
+                for (const entry of aiResponses) {
+                    const text = entry.parts.map(part => part.text).join(' ');
+                    scanText += text + ' ';
+                }
+            }
+            
+            // Still scan player input from recent history if enabled
+            if (rule.scanPlayerInput !== false) {
+                const recentHistory = context.gameHistory.slice(-depth);
+                for (const entry of recentHistory) {
+                    if (entry.role === 'user') {
+                        const text = entry.parts.map(part => part.text).join(' ');
+                        scanText += text + ' ';
+                    }
                 }
             }
         }
