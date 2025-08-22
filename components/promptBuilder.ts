@@ -731,8 +731,16 @@ export class EnhancedRAGSystem {
         return [...new Set(words)];
     }
 
-    private formatGameTime(time: any, turnCount: number): string {
-        return `Thời gian: Năm ${time.year} Tháng ${time.month} Ngày ${time.day}, ${time.hour} giờ (Lượt ${turnCount})`;
+    private formatGameTime(time: any, turnCount?: number): string {
+        if (!time) return 'Không xác định';
+        
+        try {
+            const { year, month, day, hour, minute } = time;
+            const timeStr = `Năm ${year || '?'} Tháng ${month || '?'} Ngày ${day || '?'}, ${hour || 0} giờ ${minute || 0} phút`;
+            return turnCount !== undefined ? `Thời gian: ${timeStr} (Lượt ${turnCount})` : timeStr;
+        } catch {
+            return 'Lỗi định dạng thời gian';
+        }
     }
 
     // UPDATED: Aggressive truncation for token control
@@ -1297,20 +1305,53 @@ export class EnhancedRAGSystem {
         }
         
         prompt += `
-YÊU CẦU: Tiếp tục câu chuyện dựa trên hành động và tri thức đã truy xuất.
+=== YÊU CẦU XỬ LÝ ===
+Tiếp tục câu chuyện dựa trên hành động và tri thức đã truy xuất.
 
-**NGÔN NGỮ BẮT BUỘC:**
--BẮT BUỘC sử dụng 100% tiếng Việt trong toàn bộ nội dung (story, choices, descriptions)
--TUYỆT ĐỐI KHÔNG dùng tiếng Anh trừ tên riêng nước ngoài
--Quan hệ PHẢI dùng tiếng Việt: "friend"→"bạn bè", "enemy"→"kẻ thù", "ally"→"đồng minh", "lover"→"người yêu", "family"→"gia đình", "master"→"sư phụ", "rival"→"đối thủ"
--Kiểm tra kỹ lưỡng để không có từ tiếng Anh nào lọt vào câu chuyện
--Tuyệt đối không lập lại hành động của NPC ở lượt trước vào lượt này.
+=== QUY TẮC QUAN TRỌNG ===
 
-HƯỚNG DẪN SỬ DỤNG TAG KỸ NĂNG:
-- Khi một kỹ năng được THAY ĐỔI/NÂNG CẤP/GIẢI PHONG ẤN: Sử dụng [SKILL_UPDATE: oldSkill="tên kỹ năng cũ" newSkill="tên kỹ năng mới" target="tên nhân vật" description="mô tả kỹ năng mới"]
-- Khi học kỹ năng HOÀN TOÀN MỚI (chưa từng có): Sử dụng [SKILL_LEARNED: name="tên kỹ năng" learner="tên nhân vật" description="mô tả"]
-- KHÔNG BAO GIỜ tạo kỹ năng trùng lặp - luôn dùng SKILL_UPDATE để thay thế kỹ năng cũ
-- Ví dụ: "Thiên Hồ Huyễn Linh Bí Pháp (đang phong ấn)" → "Thiên Hồ Huyễn Linh Bí Pháp (Sơ Giải)" phải dùng SKILL_UPDATE`;
+**1. NGÔN NGỮ BẮT BUỘC - 100% TIẾNG VIỆT:**
+• Tuyệt đối KHÔNG tiếng Anh (trừ tên riêng nước ngoài)
+• Từ bắt buộc dịch: "friend"→"bạn", "enemy"→"kẻ thù", "ally"→"đồng minh", "lover"→"người yêu", "master"→"thầy", "rival"→"đối thủ"
+
+**2. QUYỀN HẠN GM VÀ GIỚI HẠN:**
+• CHỈ mô tả phản ứng NPC và môi trường
+• NGHIÊM CẤM: đóng vai PC, mô tả/sửa đổi lời nói PC, quyết định thay PC
+
+**3. NPC KHÔNG TOÀN TRI:**
+NPC chỉ biết thông tin họ có thể biết, KHÔNG được truy cập bảng thông tin của PC/NPC khác.
+
+✓ **VÍ DỤ ĐÚNG:**
+PC có kỹ năng "Thiên Cơ Bất Truyền" nhưng chưa từng sử dụng trước mặt Sư phụ.
+GM: Sư phụ nói: "Ta thấy ngươi tiến bộ nhanh, nhưng không rõ ngươi đã học được kỹ năng gì."
+
+✗ **VÍ DỤ SAI:**
+PC có kỹ năng "Thiên Cơ Bất Truyền" trong bảng kỹ năng.
+GM: Sư phụ nói: "Ta biết ngươi đã học được Thiên Cơ Bất Truyền rồi."
+[Sư phụ không thể biết kỹ năng chưa được PC tiết lộ]
+
+**4. NGHIÊM CẤM ÂM MƯU HÓA PC:**
+TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ mô tả những gì NPC/môi trường quan sát được.
+
+✗ **VÍ DỤ SAI:**
+"Ngươi biết rõ kỹ năng đã tác động. Có vẻ cô gái này có ý chí mạnh mẽ hơn. **Điều này càng làm ngươi hứng thú hơn. Một thử thách đáng giá, đúng như ngươi mong đợi.**"
+[GM KHÔNG THỂ biết PC cảm thấy "hứng thú" hay "mong đợi" - đây là suy nghĩ nội tâm của PC]
+
+✓ **VÍ DỤ ĐÚNG:**
+"Ngươi biết rõ kỹ năng đã tác động. Có vẻ cô gái này có ý chí mạnh mẽ hơn những người khác, nhưng không hoàn toàn miễn nhiễm."
+[GM chỉ mô tả kết quả quan sát được, KHÔNG đoán cảm xúc PC]
+
+🚨 **QUY TẮC VÀNG:** Nếu câu bắt đầu bằng "Ngươi cảm thấy/nghĩ/muốn/hứng thú..." → XÓA NGAY!
+
+=== HƯỚNG DẪN KỸ THUẬT ===
+
+**TAG KỸ NĂNG:**
+• SKILL_UPDATE: Khi kỹ năng được THAY ĐỔI/NÂNG CẤP/GIẢI PHONG ẤN
+  [SKILL_UPDATE: oldSkill="tên cũ" newSkill="tên mới" target="nhân vật" description="mô tả"]
+• SKILL_LEARNED: Khi học kỹ năng HOÀN TOÀN MỚI (chưa từng có)
+  [SKILL_LEARNED: name="tên kỹ năng" learner="nhân vật" description="mô tả"]
+• KHÔNG BAO GIỜ tạo kỹ năng trùng lặp - luôn dùng SKILL_UPDATE để thay thế
+• Ví dụ: "Thiên Hồ Huyễn Linh Bí Pháp (đang phong ấn)" → "Thiên Hồ Huyễn Linh Bí Pháp (Sơ Giải)" → dùng SKILL_UPDATE`;
         
         return prompt;
     }
@@ -1411,6 +1452,7 @@ HƯỚNG DẪN SỬ DỤNG TAG KỸ NĂNG:
         const pcName = pc?.name || 'Nhân vật chính';
         
         return `
+=== THÔNG TIN CƠ BẢN ===
 Nhân vật: ${pcName}
 Vị trí: ${pc?.location || 'Không xác định'}
 Lượt: ${gameState.turnCount}
@@ -1418,15 +1460,53 @@ Lượt: ${gameState.turnCount}
 --- HÀNH ĐỘNG CỦA NGƯỜI CHƠI ---
 "${action}"
 
-YÊU CẦU: Tiếp tục câu chuyện dựa trên hành động và tri thức đã truy xuất.
--Bắt buộc phải sử dụng 100% tiếng việt trừ danh từ riêng.
--Tuyệt đối không lập lại hành động của NPC ở lượt trước vào lượt này.
+=== YÊU CẦU XỬ LÝ ===
+Tiếp tục câu chuyện dựa trên hành động và tri thức đã truy xuất.
 
-HƯỚNG DẪN SỬ DỤNG TAG KỸ NĂNG:
-- Khi một kỹ năng được THAY ĐỔI/NÂNG CẤP/GIẢI PHONG ẤN: Sử dụng [SKILL_UPDATE: oldSkill="tên kỹ năng cũ" newSkill="tên kỹ năng mới" target="tên nhân vật" description="mô tả kỹ năng mới"]
-- Khi học kỹ năng HOÀN TOÀN MỚI (chưa từng có): Sử dụng [SKILL_LEARNED: name="tên kỹ năng" learner="tên nhân vật" description="mô tả"]
-- KHÔNG BAO GIỜ tạo kỹ năng trùng lặp - luôn dùng SKILL_UPDATE để thay thế kỹ năng cũ
-- Ví dụ: "Thiên Hồ Huyễn Linh Bí Pháp (đang phong ấn)" → "Thiên Hồ Huyễn Linh Bí Pháp (Sơ Giải)" phải dùng SKILL_UPDATE`;
+=== QUY TẮC QUAN TRỌNG ===
+
+**1. NGÔN NGỮ BẮT BUỘC - 100% TIẾNG VIỆT:**
+• Tuyệt đối KHÔNG tiếng Anh (trừ tên riêng nước ngoài)
+• Từ bắt buộc dịch: "friend"→"bạn", "enemy"→"kẻ thù", "ally"→"đồng minh", "lover"→"người yêu", "master"→"thầy", "rival"→"đối thủ"
+
+**2. QUYỀN HẠN GM VÀ GIỚI HẠN:**
+• CHỈ mô tả phản ứng NPC và môi trường
+• NGHIÊM CẤM: đóng vai PC, mô tả/sửa đổi lời nói PC, quyết định thay PC
+
+**3. NPC KHÔNG TOÀN TRI:**
+NPC chỉ biết thông tin họ có thể biết, KHÔNG được truy cập bảng thông tin của PC/NPC khác.
+
+✓ **VÍ DỤ ĐÚNG:**
+PC có kỹ năng "Thiên Cơ Bất Truyền" nhưng chưa từng sử dụng trước mặt Sư phụ.
+GM: Sư phụ nói: "Ta thấy ngươi tiến bộ nhanh, nhưng không rõ ngươi đã học được kỹ năng gì."
+
+✗ **VÍ DỤ SAI:**
+PC có kỹ năng "Thiên Cơ Bất Truyền" trong bảng kỹ năng.
+GM: Sư phụ nói: "Ta biết ngươi đã học được Thiên Cơ Bất Truyền rồi."
+[Sư phụ không thể biết kỹ năng chưa được PC tiết lộ]
+
+**4. NGHIÊM CẤM ÂM MƯU HÓA PC:**
+TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ mô tả những gì NPC/môi trường quan sát được.
+
+✗ **VÍ DỤ SAI:**
+"Ngươi biết rõ kỹ năng đã tác động. Có vẻ cô gái này có ý chí mạnh mẽ hơn. **Điều này càng làm ngươi hứng thú hơn. Một thử thách đáng giá, đúng như ngươi mong đợi.**"
+[GM KHÔNG THỂ biết PC cảm thấy "hứng thú" hay "mong đợi" - đây là suy nghĩ nội tâm của PC]
+
+✓ **VÍ DỤ ĐÚNG:**
+"Ngươi biết rõ kỹ năng đã tác động. Có vẻ cô gái này có ý chí mạnh mẽ hơn những người khác, nhưng không hoàn toàn miễn nhiễm."
+[GM chỉ mô tả kết quả quan sát được, KHÔNG đoán cảm xúc PC]
+
+🚨 **QUY TẮC VÀNG:** Nếu câu bắt đầu bằng "Ngươi cảm thấy/nghĩ/muốn/hứng thú..." → XÓA NGAY!
+
+=== HƯỚNG DẪN KỸ THUẬT ===
+
+**TAG KỸ NĂNG:**
+• SKILL_UPDATE: Khi kỹ năng được THAY ĐỔI/NÂNG CẤP/GIẢI PHONG ẤN
+  [SKILL_UPDATE: oldSkill="tên cũ" newSkill="tên mới" target="nhân vật" description="mô tả"]
+• SKILL_LEARNED: Khi học kỹ năng HOÀN TOÀN MỚI (chưa từng có)
+  [SKILL_LEARNED: name="tên kỹ năng" learner="nhân vật" description="mô tả"]
+• KHÔNG BAO GIỜ tạo kỹ năng trùng lặp - luôn dùng SKILL_UPDATE để thay thế
+• Ví dụ: "Thiên Hồ Huyễn Linh Bí Pháp (đang phong ấn)" → "Thiên Hồ Huyễn Linh Bí Pháp (Sơ Giải)" → dùng SKILL_UPDATE`;
 
     }
 
@@ -1508,16 +1588,6 @@ HƯỚNG DẪN SỬ DỤNG TAG KỸ NĂNG:
         return descriptions[type] || 'Hành động cần được phân tích cụ thể';
     }
 
-    private formatGameTime(gameTime: any): string {
-        if (!gameTime) return 'Không xác định';
-        
-        try {
-            const { year, month, day, hour, minute } = gameTime;
-            return `Năm ${year || '?'} Tháng ${month || '?'} Ngày ${day || '?'}, ${hour || 0} giờ ${minute || 0} phút`;
-        } catch {
-            return 'Lỗi định dạng thời gian';
-        }
-    }
 }
 
 // Type definitions for the enhanced system
