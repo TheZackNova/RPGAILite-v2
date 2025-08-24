@@ -481,7 +481,56 @@ Hãy gợi ý hành động:`;
                 return;
             }
             
-            const jsonResponse = JSON.parse(cleanText);
+            // Enhanced JSON parsing with error handling for unterminated strings
+            let jsonResponse;
+            try {
+                // First, try to fix common JSON issues
+                let fixedText = cleanText;
+                
+                // Fix unterminated strings by ensuring all quotes are properly closed
+                const quotes = fixedText.match(/"/g);
+                if (quotes && quotes.length % 2 !== 0) {
+                    // Odd number of quotes - add missing closing quote at the end
+                    console.warn("Detected unterminated string, attempting to fix...");
+                    fixedText = fixedText + '"';
+                }
+                
+                // Try to parse the fixed JSON
+                jsonResponse = JSON.parse(fixedText);
+            } catch (parseError: any) {
+                console.error("JSON parse error:", parseError.message);
+                console.log("Attempting to salvage response...");
+                
+                // Try to extract story and choices manually if JSON parsing fails
+                try {
+                    const storyMatch = cleanText.match(/"story"\s*:\s*"([^"]+(?:\\.[^"]*)*?)"/);
+                    const choicesMatch = cleanText.match(/"choices"\s*:\s*\[((?:[^[\]]*|\[[^[\]]*\])*)\]/);
+                    
+                    if (storyMatch) {
+                        jsonResponse = {
+                            story: storyMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n'),
+                            choices: []
+                        };
+                        
+                        // Try to extract choices if found
+                        if (choicesMatch) {
+                            try {
+                                const choicesStr = '[' + choicesMatch[1] + ']';
+                                jsonResponse.choices = JSON.parse(choicesStr);
+                            } catch (choiceError) {
+                                console.warn("Could not parse choices, using empty array");
+                            }
+                        }
+                    } else {
+                        throw new Error("Could not extract story from malformed JSON");
+                    }
+                } catch (salvageError) {
+                    console.error("Failed to salvage response:", salvageError);
+                    storyLogManager.update(prev => [...prev, `Lỗi: Không thể phân tích phản hồi AI. Chi tiết: ${parseError.message}`]);
+                    setChoices([]);
+                    return;
+                }
+            }
             
             // Validate required fields
             if (!jsonResponse.story) {
