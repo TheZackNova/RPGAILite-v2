@@ -18,9 +18,9 @@ export interface CompressedHistorySegment {
 export class HistoryManager {
     // Cấu hình mặc định - có thể điều chỉnh
     private static readonly DEFAULT_CONFIG: HistoryConfig = {
-        maxActiveEntries: 20,        // Giữ 20 entries = 10 lượt gần nhất
-        compressionThreshold: 30,    // Compress khi có > 30 entries
-        summaryLength: 200          // Tóm tắt tối đa 200 ký tự
+        maxActiveEntries: 80,        // Giữ 20 entries = 10 lượt gần nhất
+        compressionThreshold: 90,    // Compress khi có > 30 entries
+        summaryLength: 500          // Tóm tắt tối đa 200 ký tự
     };
 
     /**

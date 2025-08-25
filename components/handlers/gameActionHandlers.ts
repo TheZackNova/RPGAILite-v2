@@ -127,17 +127,24 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
 
 **LƯU Ý CUỐI CÙNG**: Kiểm tra kỹ lưỡng toàn bộ output để đảm bảo 100% tiếng Việt, không có từ tiếng Anh nào!`;
 
-        const finalHistory: GameHistoryEntry[] = [{ role: 'user', parts: [{ text: userPrompt }] }];
-        setGameHistory(finalHistory);
+        // OPTIMIZED: Store only "INITIAL_STORY" instead of full prompt for token efficiency
+        const optimizedInitialEntry: GameHistoryEntry = { 
+            role: 'user', 
+            parts: [{ text: 'INITIAL_STORY: Generate opening story' }] 
+        };
+        setGameHistory([optimizedInitialEntry]);
 
         try {
             console.log('📖 GenerateInitialStory: Making AI request with model:', selectedModel);
             console.log('📖 GenerateInitialStory: System instruction length:', systemInstruction.length);
-            console.log('📖 GenerateInitialStory: Initial history:', finalHistory);
+            console.log('📖 GenerateInitialStory: Making API call with full prompt but storing optimized version');
+            
+            // Use full prompt for AI generation
+            const fullInitialHistory: GameHistoryEntry[] = [{ role: 'user', parts: [{ text: userPrompt }] }];
             
             const response = await ai.models.generateContent({
                 model: selectedModel, 
-                contents: finalHistory,
+                contents: fullInitialHistory,
                 config: { 
                     systemInstruction: systemInstruction, 
                     responseMimeType: "application/json", 
@@ -259,13 +266,23 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             gameStateHash: `T${currentGameState.turnCount}_${currentGameState.gameTime?.year}_${currentGameState.gameTime?.month}_${currentGameState.gameTime?.day}_${currentGameState.gameTime?.hour}`
         });
 
-        const newUserEntry: GameHistoryEntry = { role: 'user', parts: [{ text: userPrompt }] };
-        const updatedHistory = [...gameHistory, newUserEntry];
+        // OPTIMIZED: Store only essential user action instead of full RAG prompt for token efficiency
+        const userActionMatch = userPrompt.match(/--- HÀNH ĐỘNG CỦA NGƯỜI CHƠI ---\n"([^"]+)"/);
+        const userAction = userActionMatch ? userActionMatch[1] : action;
+        const optimizedUserEntry: GameHistoryEntry = { 
+            role: 'user', 
+            parts: [{ text: `ACTION: ${userAction}` }] 
+        };
+        
+        // For AI API call: use full prompt with current history
+        const apiHistory = [...gameHistory, { role: 'user', parts: [{ text: userPrompt }] }];
+        // For storage: use optimized entry
+        const updatedHistory = [...gameHistory, optimizedUserEntry];
 
         try {
             const response = await ai.models.generateContent({
                 model: selectedModel, 
-                contents: updatedHistory,
+                contents: apiHistory, // Use full context for AI
                 config: { 
                     systemInstruction: systemInstruction, 
                     responseMimeType: "application/json", 
@@ -338,16 +355,16 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                 
                 const retryText = retryResponse.text?.trim() || '';
                 if (retryText) {
-                    setGameHistory(prev => [...prev, newUserEntry, { role: 'model', parts: [{ text: retryText }] }]);
+                    setGameHistory(prev => [...prev, optimizedUserEntry, { role: 'model', parts: [{ text: retryText }] }]);
                     parseApiResponseHandler(retryText);
                     console.log(`✅ [Turn ${currentGameState.turnCount}] Successfully generated unique response on retry`);
                 } else {
                     // Fallback to original response if retry fails
-                    setGameHistory(prev => [...prev, newUserEntry, { role: 'model', parts: [{ text: responseText }] }]);
+                    setGameHistory(prev => [...prev, optimizedUserEntry, { role: 'model', parts: [{ text: responseText }] }]);
                     parseApiResponseHandler(responseText);
                 }
             } else {
-                setGameHistory(prev => [...prev, newUserEntry, { role: 'model', parts: [{ text: responseText }] }]);
+                setGameHistory(prev => [...prev, optimizedUserEntry, { role: 'model', parts: [{ text: responseText }] }]);
                 parseApiResponseHandler(responseText);
             }
             

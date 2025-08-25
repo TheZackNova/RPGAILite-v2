@@ -7,7 +7,18 @@
       "Bash(npx tsc:*)",
       "Bash(node:*)",
       "Bash(rm:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(npx tsx:*)",
+      "Read(/D:\\Download\\0xcheat\\AISimul/**)",
+      "Read(/D:\\Download\\0xcheat\\AISimul/**)",
+      "Read(/D:\\Download\\0xcheat\\AISimul/**)",
+      "Read(/D:\\Download\\0xcheat/**)",
+      "Read(/D:\\Download\\0xcheat/**)",
+      "Read(/D:\\Download\\0xcheat\\AISimul/**)",
+      "Read(/D:\\Download\\0xcheat\\AISimul/**)",
+      "Read(/D:\\Download\\0xcheat/**)",
+      "Read(/D:\\Download\\0xcheat\\AISimul/**)"
     ],
     "deny": [],
     "ask": []

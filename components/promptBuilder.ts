@@ -1044,45 +1044,47 @@ export class EnhancedRAGSystem {
         return context + "\n";
     }
 
-    // UPDATED: More aggressive history context reduction
+    // OPTIMIZED: AI-response-only history for massive token savings
     private buildSmartHistoryContext(history: GameHistoryEntry[], maxTokens: number): string {
         let context = "**Diễn biến gần đây:**\n";
         let usedTokens = this.estimateTokens(context);
         
-        const recentEvents: string[] = [];
-        const lookback = Math.min(1, history.length); // Giảm từ 2 xuống 1
+        const storyEvents: string[] = [];
+        const lookback = Math.min(4, Math.floor(history.length / 2)); // Tăng lên 4 pairs (user+model)
         
-        for (let i = history.length - lookback; i < history.length; i++) {
+        // Chỉ xử lý AI responses - bỏ qua user prompts hoàn toàn
+        for (let i = history.length - lookback * 2; i < history.length; i++) {
             const entry = history[i];
-            if (entry.role === 'user') {
-                const actionMatch = entry.parts[0].text.match(/--- HÀNH ĐỘNG CỦA NGƯỜI CHƠI ---\n"([^"]+)"/);
-                if (actionMatch) {
-                    // Truncate action nếu quá dài
-                    const action = actionMatch[1];
-                    const shortAction = action.length > 100 ? action.substring(0, 100) + '...' : action;
-                    recentEvents.push(`> ${shortAction}`);
-                }
-            } else {
+            
+            // CHỈ lấy AI responses để tiết kiệm token
+            if (entry.role === 'model') {
                 try {
                     const parsed = JSON.parse(entry.parts[0].text);
+                    
+                    // Trích xuất story content từ AI response
                     if (parsed.story) {
-                        const summary = this.summarizeStory(parsed.story);
-                        if (summary) {
-                            // Truncate summary
-                            const shortSummary = summary.length > 150 ? summary.substring(0, 150) + '...' : summary;
-                            recentEvents.push(shortSummary);
+                        const storySegment = this.extractStoryContinuity(parsed.story);
+                        if (storySegment) {
+                            storyEvents.push(storySegment);
                         }
                     }
+                    
+                    // Trích xuất game state changes quan trọng
+                    const stateChanges = this.extractStateChanges(parsed);
+                    if (stateChanges) {
+                        storyEvents.push(`[Thay đổi] ${stateChanges}`);
+                    }
+                    
                 } catch (e) {
-                    // Skip
+                    // Skip malformed responses
                 }
             }
         }
         
-        // Add events với limit chặt chẽ hơn
-        recentEvents.forEach(event => {
+        // Add story events với token budget thoải mái hơn
+        storyEvents.forEach(event => {
             const eventTokens = this.estimateTokens(event + '\n');
-            if (usedTokens + eventTokens <= maxTokens * 0.8) { // Chỉ dùng 80% token budget
+            if (usedTokens + eventTokens <= maxTokens) {
                 context += event + '\n';
                 usedTokens += eventTokens;
             }
@@ -1105,6 +1107,77 @@ export class EnhancedRAGSystem {
         }
         
         return sentences[0]?.trim() + '.' || '';
+    }
+
+    // NEW: Extract story continuity from AI responses (key events and context)
+    private extractStoryContinuity(story: string): string | null {
+        if (!story || story.length < 20) return null;
+        
+        // Tìm các câu có keyword quan trọng cho story continuity
+        const sentences = story.split(/[.!?]+/).filter(s => s.trim().length > 15);
+        const continuityKeywords = /đã|đang|sẽ|vừa|bắt đầu|kết thúc|phát hiện|gặp|nói|quyết định|cảm thấy|di chuyển|tới|về|rời/;
+        
+        // Lấy 1-2 câu quan trọng nhất
+        const importantSentences = sentences
+            .filter(s => continuityKeywords.test(s))
+            .slice(0, 2)
+            .map(s => s.trim());
+        
+        if (importantSentences.length === 0) {
+            // Fallback: lấy câu đầu và cuối
+            const firstSentence = sentences[0]?.trim();
+            const lastSentence = sentences[sentences.length - 1]?.trim();
+            
+            if (firstSentence && firstSentence !== lastSentence) {
+                return `${firstSentence}... ${lastSentence}.`;
+            }
+            return firstSentence ? `${firstSentence}.` : null;
+        }
+        
+        return importantSentences.join('. ') + '.';
+    }
+
+    // NEW: Extract important game state changes from AI response
+    private extractStateChanges(parsedResponse: any): string | null {
+        const changes: string[] = [];
+        
+        try {
+            // Location changes
+            if (parsedResponse.location_update) {
+                changes.push(`Vị trí → ${parsedResponse.location_update.new_location}`);
+            }
+            
+            // Skill learning/updates
+            if (parsedResponse.story?.includes('SKILL_LEARNED') || parsedResponse.story?.includes('SKILL_UPDATE')) {
+                changes.push('Kỹ năng được cập nhật');
+            }
+            
+            // Entity updates
+            if (parsedResponse.entity_updates && parsedResponse.entity_updates.length > 0) {
+                const entityCount = parsedResponse.entity_updates.length;
+                changes.push(`${entityCount} thực thể cập nhật`);
+            }
+            
+            // Quest updates
+            if (parsedResponse.quest_updates && parsedResponse.quest_updates.length > 0) {
+                changes.push('Nhiệm vụ tiến triển');
+            }
+            
+            // Status effects
+            if (parsedResponse.status_updates && parsedResponse.status_updates.length > 0) {
+                changes.push('Trạng thái thay đổi');
+            }
+            
+            // Memory creation
+            if (parsedResponse.memory_update) {
+                changes.push('Ký ức mới');
+            }
+            
+            return changes.length > 0 ? changes.join(', ') : null;
+            
+        } catch (e) {
+            return null;
+        }
     }
 
     private buildContextualInfo(gameState: SaveData, maxTokens: number): string {
