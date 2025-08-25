@@ -12,6 +12,9 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
       { type: 'improvement', text: 'Massive Token Budget Liberation - History context giờ chỉ tiêu tốn ~1k tokens thay vì 15k tokens, giải phóng 14k tokens cho entities, custom rules, world info, và context khác. Cho phép tăng cường RAG system và rule activation mà không vượt quá 90k token limit.' },
       { type: 'improvement', text: 'Optimized Save File Performance - Save files giảm từ 30MB+ xuống ~2MB (95% reduction), load/save nhanh hơn đáng kể, memory usage thấp hơn. GameHistory entries từ 1,468 tokens → 77 tokens mỗi user action, overall conversation savings 67.8% cho 10 turns.' },
       { type: 'technical', text: 'gameActionHandlers.ts Storage Separation - Tách riêng API history (full context cho AI quality) và storage history (optimized entries). AI vẫn nhận đầy đủ context khi generate, nhưng gameHistory chỉ lưu "ACTION: [user_action]" format thay vì massive RAG prompts.' },
+      { type: 'fix', text: 'NPC Information Reset/Duplication Prevention - Fixed critical issue where AI recreated existing NPCs, causing information loss. LORE_NPC tags now merge with existing entities instead of overwriting, preserving referenceId, skills, và accumulated data. Added anti-duplication warnings trong AI context.' },
+      { type: 'fix', text: 'Enhanced Entity Deduplication System - Triển khai intelligent entity merging cho NPCs và locations. System now preserves existing reference IDs, relationships, và character development while allowing AI to update/enhance entity information naturally.' },
+      { type: 'improvement', text: 'Anti-Recreation Context Warnings - Thêm "⚠️ THỰC THỂ ĐÃ TỒN TẠI - KHÔNG TẠO LẠI" warnings trong AI prompts với danh sách existing entities. Giúp AI aware về existing characters và sử dụng ENTITY_UPDATE thay vì LORE_NPC cho character development.' },
     ],
   },
   {

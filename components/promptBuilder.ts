@@ -1190,6 +1190,17 @@ export class EnhancedRAGSystem {
             usedTokens += this.estimateTokens(context);
         }
         
+        // ANTI-DUPLICATION: List existing entity names to prevent AI from recreating them
+        const entityNames = Object.keys(gameState.knownEntities);
+        if (entityNames.length > 0) {
+            const entityListText = `**⚠️ THỰC THỂ ĐÃ TỒN TẠI - KHÔNG TẠO LẠI:** ${entityNames.join(', ')}\n\n`;
+            const entityListTokens = this.estimateTokens(entityListText);
+            if (usedTokens + entityListTokens <= maxTokens * 0.1) { // Use max 10% of context budget
+                context += entityListText;
+                usedTokens += entityListTokens;
+            }
+        }
+        
         // Chronicle (prioritized memories)
         const chronicleTokens = Math.floor((maxTokens - usedTokens) * 0.4);
         const chronicleContext = this.buildChronicleContext(gameState.chronicle, chronicleTokens);

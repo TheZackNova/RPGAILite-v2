@@ -1039,17 +1039,41 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                         break;
                     case 'LORE_NPC':
                         setKnownEntities(prev => {
-                            const newAttributes = { ...attributes };
-                            if (typeof newAttributes.skills === 'string') {
-                                newAttributes.skills = newAttributes.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+                            const existingNPC = prev[attributes.name];
+                            
+                            // If NPC already exists, merge with existing data instead of overwriting
+                            if (existingNPC && existingNPC.type === 'npc') {
+                                console.log(`📝 Updating existing NPC: ${attributes.name}`);
+                                const newAttributes = { ...attributes };
+                                if (typeof newAttributes.skills === 'string') {
+                                    newAttributes.skills = newAttributes.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+                                }
+                                
+                                // Merge attributes, preserving existing data when possible
+                                const updatedNPC: Entity = {
+                                    ...existingNPC, // Preserve existing data
+                                    ...newAttributes, // Apply new data
+                                    type: 'npc', // Ensure type stays correct
+                                    referenceId: existingNPC.referenceId, // Keep original reference ID
+                                    name: attributes.name // Ensure name consistency
+                                };
+                                
+                                console.log(`🔄 Updated NPC ${attributes.name} with new attributes`);
+                                return { ...prev, [attributes.name]: updatedNPC };
+                            } else {
+                                // Create new NPC only if doesn't exist
+                                const newAttributes = { ...attributes };
+                                if (typeof newAttributes.skills === 'string') {
+                                    newAttributes.skills = newAttributes.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+                                }
+                                const newNPC: Entity = { 
+                                    type: 'npc', 
+                                    referenceId: ReferenceIdGenerator.generateReferenceId(attributes.name, 'npc'),
+                                    ...newAttributes 
+                                };
+                                console.log(`🔗 Created new NPC ${attributes.name}: ${newNPC.referenceId}`);
+                                return { ...prev, [attributes.name]: newNPC };
                             }
-                            const newNPC: Entity = { 
-                                type: 'npc', 
-                                referenceId: ReferenceIdGenerator.generateReferenceId(attributes.name, 'npc'),
-                                ...newAttributes 
-                            };
-                            console.log(`🔗 Generated reference ID for NPC ${attributes.name}: ${newNPC.referenceId}`);
-                            return { ...prev, [attributes.name]: newNPC };
                         });
                         break;
                     case 'LORE_ITEM':
@@ -1065,20 +1089,37 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                         break;
                     case 'LORE_LOCATION':
                         setKnownEntities(prev => {
-                            const newLocation: Entity = { 
-                                type: 'location', 
-                                referenceId: ReferenceIdGenerator.generateReferenceId(attributes.name, 'location'),
-                                ...attributes 
-                            };
-                            console.log(`🔗 Generated reference ID for location ${attributes.name}: ${newLocation.referenceId}`);
-                            const newEntities = { ...prev, [attributes.name]: newLocation };
-                            setLocationDiscoveryOrder(prevOrder => {
-                                if (!prevOrder.includes(attributes.name)) {
-                                    return [...prevOrder, attributes.name];
-                                }
-                                return prevOrder;
-                            });
-                            return newEntities;
+                            const existingLocation = prev[attributes.name];
+                            
+                            // If location already exists, merge with existing data
+                            if (existingLocation && existingLocation.type === 'location') {
+                                console.log(`📝 Updating existing location: ${attributes.name}`);
+                                const updatedLocation: Entity = {
+                                    ...existingLocation, // Preserve existing data
+                                    ...attributes, // Apply new data
+                                    type: 'location',
+                                    referenceId: existingLocation.referenceId,
+                                    name: attributes.name
+                                };
+                                console.log(`🔄 Updated location ${attributes.name} with new attributes`);
+                                return { ...prev, [attributes.name]: updatedLocation };
+                            } else {
+                                // Create new location only if doesn't exist
+                                const newLocation: Entity = { 
+                                    type: 'location', 
+                                    referenceId: ReferenceIdGenerator.generateReferenceId(attributes.name, 'location'),
+                                    ...attributes 
+                                };
+                                console.log(`🔗 Created new location ${attributes.name}: ${newLocation.referenceId}`);
+                                const newEntities = { ...prev, [attributes.name]: newLocation };
+                                setLocationDiscoveryOrder(prevOrder => {
+                                    if (!prevOrder.includes(attributes.name)) {
+                                        return [...prevOrder, attributes.name];
+                                    }
+                                    return prevOrder;
+                                });
+                                return newEntities;
+                            }
                         });
                         break;
                     case 'LORE_FACTION':
