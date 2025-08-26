@@ -25,7 +25,6 @@ import { useHistoryCompression } from './hooks/useHistoryCompression';
 // Modal Imports
 import { MemoizedModals } from './MemoizedModals.tsx';
 import { GameSettingsModal, GameSettings } from './GameSettingsModal.tsx';
-import { EntityImportModal } from './EntityImportModal';
 
 // UI Components
 import { DesktopHeader } from './game/DesktopHeader.tsx';
@@ -44,7 +43,6 @@ import { FloatingTimeDisplay } from './FloatingTimeDisplay.tsx';
 import { GameStateOptimizer, CleanupStats } from './GameStateOptimizer';
 import { UnifiedMemoryManager } from './utils/UnifiedMemoryManager';
 import { MemoryAnalytics } from './utils/MemoryAnalytics';
-import { EntityExportManager } from './utils/EntityExportManager';
 import { useDebouncedCallback } from './hooks/useDebounce.ts';
 import { OptimizedInteractiveText } from './OptimizedInteractiveText.tsx';
 import { getThemeColors } from './utils/themeUtils';
@@ -141,7 +139,7 @@ export const GameScreen: React.FC<{
     const {
         isHomeModalOpen, isRestartModalOpen, isMemoryModalOpen, isKnowledgeModalOpen,
         isCustomRulesModalOpen, isMapModalOpen, isPcInfoModalOpen, isPartyModalOpen,
-        isQuestLogModalOpen, isSidebarOpen, isChoicesModalOpen, isGameSettingsModalOpen, isEntityImportModalOpen,
+        isQuestLogModalOpen, isSidebarOpen, isChoicesModalOpen, isGameSettingsModalOpen,
         isInventoryModalOpen, isAdminModalOpen, isEditItemModalOpen, isEditSkillModalOpen, isEditNPCModalOpen, isEditPCModalOpen, isEditLocationModalOpen, isRegexManagerModalOpen, activeEntity, activeStatus, activeQuest, activeEditItem, activeEditSkill, activeEditNPC, activeEditPC, activeEditLocation, showSaveSuccess, showRulesSavedSuccess,
         notification
     } = modalState;
@@ -149,7 +147,7 @@ export const GameScreen: React.FC<{
     const {
         setIsHomeModalOpen, setIsRestartModalOpen, setIsMemoryModalOpen, setIsKnowledgeModalOpen,
         setIsCustomRulesModalOpen, setIsMapModalOpen, setIsPcInfoModalOpen, setIsPartyModalOpen,
-        setIsQuestLogModalOpen, setIsSidebarOpen, setIsChoicesModalOpen, setIsGameSettingsModalOpen, setIsEntityImportModalOpen,
+        setIsQuestLogModalOpen, setIsSidebarOpen, setIsChoicesModalOpen, setIsGameSettingsModalOpen,
         setIsInventoryModalOpen, setIsAdminModalOpen, setIsEditItemModalOpen, setIsEditSkillModalOpen, setIsEditNPCModalOpen, setIsEditPCModalOpen, setIsEditLocationModalOpen, setIsRegexManagerModalOpen, setActiveEntity, setActiveStatus, setActiveQuest, setActiveEditItem, setActiveEditSkill, setActiveEditNPC, setActiveEditPC, setActiveEditLocation, setShowSaveSuccess, setShowRulesSavedSuccess,
         setNotification, modalCloseHandlers
     } = modalStateActions;
@@ -288,22 +286,6 @@ export const GameScreen: React.FC<{
         partyDebugger.monitorPartyChanges(party, statuses, turnCount);
     }, [party, statuses, turnCount]);
 
-    // Configure EntityExportManager with game settings
-    useEffect(() => {
-        EntityExportManager.configure({
-            enabled: gameSettings.entityExportEnabled,
-            exportInterval: gameSettings.entityExportInterval,
-            enableDebugLogging: gameSettings.entityExportDebugLogging,
-            exportPath: '/data/game-exports/',
-            maxFileSize: 1024 * 1024, // 1MB
-            // Import settings
-            importEnabled: gameSettings.entityImportEnabled,
-            autoMergeOnImport: gameSettings.entityAutoMergeOnImport,
-            backupBeforeImport: gameSettings.entityBackupBeforeImport
-        });
-        
-        // Entity export debugging disabled
-    }, [gameSettings.entityExportEnabled, gameSettings.entityExportInterval, gameSettings.entityExportDebugLogging]);
     
     // Define generateInitialStory callback before using it
     const generateInitialStory = useCallback(async () => {
@@ -393,27 +375,12 @@ export const GameScreen: React.FC<{
                 currentHistoryCount: gameHistory.length
             });
             
-            // Try unified cleanup first with smart memory generation (more aggressive settings)
-            unifiedCleanupResult = UnifiedMemoryManager.coordinatedCleanup(currentState, {
-                maxActiveMemories: 45,               // More aggressive than before (50->45)
-                memoryCleanupThreshold: 65,          // More aggressive than before (70->65)
-                lowImportanceThreshold: 28,          // More aggressive than before (30->28)
-                maxActiveHistoryEntries: 28,         // More aggressive than before (30->28)
-                historyCompressionThreshold: 28,     // More aggressive than before (30->28)
-                maxTokenBudget: 8000,
-                memoryTokenRatio: 0.32,              // Slightly higher than before (0.3->0.32)
-                enableSmartMemoryGeneration: true,
-                smartMemoryConfig: {
-                    enableEventMemories: true,
-                    enableRelationshipMemories: true,
-                    enableDiscoveryMemories: true,
-                    enableCombatMemories: true,
-                    enableAchievementMemories: true,
-                    minImportanceThreshold: 45,      // Reduced from 60 to allow more memory creation
-                    maxMemoriesPerTurn: 3,           // Increased from 1 to create more memories
-                    lookbackTurns: 6                 // Increased from 2 to analyze more turns
-                }
-            });
+            // Use UnifiedMemoryManager with custom configuration based on game settings
+            const cleanupConfig = {
+                ...UnifiedMemoryManager.DEFAULT_CONFIG,
+                maxActiveHistoryEntries: gameSettings.maxActiveHistoryEntries || 100
+            };
+            unifiedCleanupResult = UnifiedMemoryManager.coordinatedCleanup(currentState, cleanupConfig);
             
             if (unifiedCleanupResult.cleanupTriggered) {
                 console.log("🔄 Applying unified auto cleanup (improved settings)...");
@@ -753,6 +720,27 @@ export const GameScreen: React.FC<{
         setActiveEditLocation(null);
     }, [setKnownEntities, setNotification, setIsEditLocationModalOpen, setActiveEditLocation]);
 
+    const handleUpdateEntity = useCallback((entityName: string, updates: Partial<Entity>) => {
+        setKnownEntities(prev => {
+            const entity = prev[entityName];
+            if (!entity) {
+                console.warn(`⚠️ Entity "${entityName}" not found for update`);
+                return prev;
+            }
+            
+            const updatedEntity = { ...entity, ...updates };
+            console.log(`🔄 Entity updated: ${entityName}`, { 
+                changed: Object.keys(updates), 
+                pinned: updatedEntity.pinned 
+            });
+            
+            return {
+                ...prev,
+                [entityName]: updatedEntity
+            };
+        });
+    }, [setKnownEntities]);
+
     const handleDeleteStatus = useCallback((statusName: string, entityName: string) => {
         setStatuses(prev => {
             const newStatuses = prev.filter(status => 
@@ -845,27 +833,12 @@ export const GameScreen: React.FC<{
             historyStats, cleanupStats, archivedMemories, memoryStats
         };
         
-        // Use unified memory manager for coordinated cleanup with aggressive smart memory generation
-        const unifiedResult = UnifiedMemoryManager.coordinatedCleanup(currentState, {
-            maxActiveMemories: 40,
-            memoryCleanupThreshold: 60,
-            lowImportanceThreshold: 25,
-            maxActiveHistoryEntries: 25,
-            historyCompressionThreshold: 25,
-            maxTokenBudget: 8000,
-            memoryTokenRatio: 0.35,
-            enableSmartMemoryGeneration: true,
-            smartMemoryConfig: {
-                enableEventMemories: true,
-                enableRelationshipMemories: true,
-                enableDiscoveryMemories: true,
-                enableCombatMemories: true,
-                enableAchievementMemories: true,
-                minImportanceThreshold: 35, // Lower threshold for manual cleanup
-                maxMemoriesPerTurn: 5,      // More memories for manual cleanup
-                lookbackTurns: 10           // Longer lookback for manual cleanup
-            }
-        });
+        // Use unified memory manager for coordinated cleanup with custom configuration
+        const cleanupConfig = {
+            ...UnifiedMemoryManager.DEFAULT_CONFIG,
+            maxActiveHistoryEntries: gameSettings.maxActiveHistoryEntries || 100
+        };
+        const unifiedResult = UnifiedMemoryManager.coordinatedCleanup(currentState, cleanupConfig);
         
         // Apply unified cleanup results
         if (unifiedResult.cleanupTriggered) {
@@ -1166,7 +1139,7 @@ export const GameScreen: React.FC<{
                 onClose={() => setIsSidebarOpen(false)}
                 onHome={() => setIsHomeModalOpen(true)}
                 onSettings={() => setIsGameSettingsModalOpen(true)}
-                onImport={() => setIsEntityImportModalOpen(true)}
+                onImport={() => {}}
                 onSave={handleSaveGame}
                 onExportWorldSetup={handleExportWorldSetup}
                 onMap={() => setIsMapModalOpen(true)}
@@ -1193,7 +1166,7 @@ export const GameScreen: React.FC<{
             <DesktopHeader 
                 onHome={() => setIsHomeModalOpen(true)} 
                 onSettings={() => setIsGameSettingsModalOpen(true)}
-                onImport={() => setIsEntityImportModalOpen(true)}
+                onImport={() => {}}
                 onSave={handleSaveGame} 
                 onExportWorldSetup={handleExportWorldSetup}
                 onMap={() => setIsMapModalOpen(true)}
@@ -1345,6 +1318,7 @@ export const GameScreen: React.FC<{
                             handleSaveRules={handleSaveRules}
                             handleSaveRegexRules={handleSaveRegexRules || undefined}
                             handleAction={handleAction}
+                            handleUpdateEntity={handleUpdateEntity}
                             setActiveEditItem={setActiveEditItem}
                             handleSaveEditedItem={handleSaveEditedItem}
                             setIsEditItemModalOpen={setIsEditItemModalOpen}
@@ -1388,39 +1362,6 @@ export const GameScreen: React.FC<{
                 onSettingsChange={handleSettingsChange}
             />
 
-            <EntityImportModal
-                isOpen={isEntityImportModalOpen}
-                onClose={() => setIsEntityImportModalOpen(false)}
-                gameState={{ 
-                    worldData, 
-                    knownEntities, 
-                    statuses, 
-                    gameHistory, 
-                    memories, 
-                    party, 
-                    customRules, 
-                    systemInstruction, 
-                    turnCount, 
-                    totalTokens, 
-                    gameTime, 
-                    chronicle, 
-                    compressedHistory, 
-                    historyStats, 
-                    cleanupStats, 
-                    archivedMemories, 
-                    memoryStats, 
-                    storyLog, 
-                    choices, 
-                    locationDiscoveryOrder 
-                }}
-                onImportSuccess={(results) => {
-                    // Show success notification
-                    const totalImported = results.reduce((sum, r) => sum + r.entitiesImported, 0);
-                    const totalConflicts = results.reduce((sum, r) => sum + r.conflicts.length, 0);
-                    setNotification(`Import thành công: ${totalImported} entities đã được nhập${totalConflicts > 0 ? `, ${totalConflicts} conflicts đã được giải quyết` : ''}`);
-                    setTimeout(() => setNotification(null), 5000);
-                }}
-            />
 
             {/* Floating Time Display - Only show on mobile */}
             <div className="md:hidden">

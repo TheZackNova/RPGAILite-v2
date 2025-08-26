@@ -3,6 +3,15 @@ import type { ChangelogEntry } from '../types.ts';
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.46.1',
+    date: '2025-08-26',
+    changes: [
+      { type: 'feature', text: 'Max Active History Entries Setting - Thêm slider cài đặt "Số lượng lịch sử tối đa" trong GameSettingsModal để người chơi tự điều chỉnh số mục lịch sử được giữ lại trong bộ nhớ hoạt động (50-500 entries, mặc định 100). Slider được đặt dưới checkbox "Tự động nén lịch sử" và kết nối trực tiếp với UnifiedMemoryManager.' },
+      { type: 'improvement', text: 'Customizable Memory Management - UnifiedMemoryManager giờ sử dụng cài đặt maxActiveHistoryEntries từ GameSettings thay vì giá trị hardcoded 100. Cho phép người chơi tối ưu hóa hiệu suất game theo nhu cầu: giá trị thấp (50-80) để tiết kiệm memory, giá trị cao (200-500) để giữ context chi tiết hơn.' },
+      { type: 'technical', text: 'Settings Integration - Cập nhật GameSettings interface với maxActiveHistoryEntries property, thêm vào DEFAULT_SETTINGS, và hiển thị trong "Cài đặt hiện tại" section. GameScreen.tsx truyền custom cleanup config với user setting tới coordinatedCleanup method thay vì dùng default config.' },
+    ],
+  },
+  {
     version: '1.46.0',
     date: '2025-08-25',
     changes: [

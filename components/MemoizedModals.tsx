@@ -83,6 +83,7 @@ interface MemoizedModalsProps {
     handleSaveRules: (rules: CustomRule[]) => void;
     handleSaveRegexRules?: (rules: RegexRule[]) => void;
     handleAction: (action: string) => void;
+    handleUpdateEntity?: (entityName: string, updates: Partial<Entity>) => void;
     setActiveEditItem: (item: Entity | null) => void;
     handleSaveEditedItem: (originalItem: Entity, editedItem: Entity) => void;
     setIsEditItemModalOpen: (open: boolean) => void;
@@ -516,6 +517,7 @@ const MemoizedModalsComponent = ({
     handleSaveRules,
     handleSaveRegexRules,
     handleAction,
+    handleUpdateEntity,
     setActiveEditItem,
     handleSaveEditedItem,
     setIsEditItemModalOpen,
@@ -630,6 +632,7 @@ const MemoizedModalsComponent = ({
                 pc={entityComputations.pcEntity} 
                 knownEntities={knownEntities} 
                 onEntityClick={handleEntityClick} 
+                onUpdateEntity={handleUpdateEntity}
                 turnCount={turnCount} 
             />
             

@@ -51,11 +51,9 @@ export class EnhancedRAG {
             relevanceScore: this.calculateRelevanceScore(memory, currentAction, gameState, config)
         }));
         
-        // Sort by relevance and filter by threshold
+        // Sort by relevance (no limit on memory count)
         const relevantMemories = scoredMemories
-            .filter(({ relevanceScore }) => relevanceScore >= config.importanceThreshold)
             .sort((a, b) => b.relevanceScore - a.relevanceScore)
-            .slice(0, config.maxMemories)
             .map(({ memory }) => memory);
         
         // Ensure diversity in selected memories
@@ -398,7 +396,7 @@ export class EnhancedRAG {
             recentEvents.push(...events);
         });
         
-        return recentEvents.slice(0, 5); // Limit to 5 most recent events
+        return recentEvents; // No limit on recent events
     }
 
     /**

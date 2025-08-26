@@ -1,11 +1,7 @@
 
-import type { SaveData, Memory, Quest, Status, Chronicle, Entity, KnownEntities } from './types';
+import type { SaveData, Quest, Status, Chronicle, Entity, KnownEntities } from './types';
 
 export interface CleanupConfig {
-    // Memory cleanup
-    maxUnpinnedMemories: number;      // Số memories không ghim tối đa
-    maxTotalMemories: number;         // Tổng số memories tối đa
-    
     // Chronicle cleanup  
     maxMemoirEntries: number;         // Số memoir entries tối đa
     maxChapterEntries: number;        // Số chapter entries tối đa
@@ -28,7 +24,6 @@ export interface CleanupConfig {
 }
 
 export interface CleanupStats {
-    memoriesRemoved: number;
     chronicleEntriesRemoved: number;
     questsArchived: number;
     statusesRemoved: number;
@@ -39,10 +34,6 @@ export interface CleanupStats {
 
 export class GameStateOptimizer {
     private static readonly DEFAULT_CONFIG: CleanupConfig = {
-        // Memory settings
-        maxUnpinnedMemories: 25,         // Giữ 25 memories không ghim
-        maxTotalMemories: 30,            // Tối đa 50 memories total
-        
         // Chronicle settings
         maxMemoirEntries: 15,            // Giữ 15 memoir entries
         maxChapterEntries: 20,           // Giữ 20 chapter entries  
@@ -102,7 +93,6 @@ export class GameStateOptimizer {
 
         let optimizedState = JSON.parse(JSON.stringify(gameState)); // Deep copy to avoid mutation issues
         const stats: CleanupStats = {
-            memoriesRemoved: 0,
             chronicleEntriesRemoved: 0,
             questsArchived: 0,
             statusesRemoved: 0,
@@ -111,31 +101,25 @@ export class GameStateOptimizer {
             lastCleanupTurn: gameState.turnCount
         };
 
-        // 1. Clean up memories
-        const memoryResult = this.cleanupMemories(optimizedState.memories, config);
-        optimizedState.memories = memoryResult.cleaned;
-        stats.memoriesRemoved = memoryResult.removed;
-        stats.totalTokensSaved += memoryResult.tokensSaved;
-
-        // 2. Clean up chronicle
+        // 1. Clean up chronicle
         const chronicleResult = this.cleanupChronicle(optimizedState.chronicle, config);
         optimizedState.chronicle = chronicleResult.cleaned;
         stats.chronicleEntriesRemoved = chronicleResult.removed;
         stats.totalTokensSaved += chronicleResult.tokensSaved;
 
-        // 3. Clean up quests
+        // 2. Clean up quests
         const questResult = this.cleanupQuests(optimizedState.quests, gameState.turnCount, config);
         optimizedState.quests = questResult.cleaned;
         stats.questsArchived = questResult.archived;
         stats.totalTokensSaved += questResult.tokensSaved;
 
-        // 4. Clean up statuses
+        // 3. Clean up statuses
         const statusResult = this.cleanupStatuses(optimizedState.statuses, config);
         optimizedState.statuses = statusResult.cleaned;
         stats.statusesRemoved = statusResult.removed;
         stats.totalTokensSaved += statusResult.tokensSaved;
 
-        // 5. Clean up inactive entities
+        // 4. Clean up inactive entities
         const entityResult = this.cleanupInactiveEntities(
             optimizedState.knownEntities,
             gameState.gameHistory,
@@ -153,39 +137,6 @@ export class GameStateOptimizer {
             optimizedState,
             stats,
         };
-    }
-
-    /**
-     * Cleanup memories - giữ pinned + recent unpinned
-     */
-    private static cleanupMemories(
-        memories: Memory[], 
-        config: CleanupConfig
-    ): { cleaned: Memory[]; removed: number; tokensSaved: number } {
-        const pinned = memories.filter(m => m.pinned);
-        const unpinned = memories.filter(m => !m.pinned);
-        
-        if (pinned.length > config.maxTotalMemories * 0.7) {
-            console.warn(`⚠️ Too many pinned memories (${pinned.length}). Consider unpinning some.`);
-        }
-        
-        const recentUnpinned = unpinned.slice(-config.maxUnpinnedMemories);
-        const totalKept = pinned.length + recentUnpinned.length;
-        
-        let finalMemories: Memory[];
-        if (totalKept > config.maxTotalMemories) {
-            const allowedPinned = config.maxTotalMemories - recentUnpinned.length;
-            const keptPinned = pinned.slice(-Math.max(0, allowedPinned));
-            finalMemories = [...keptPinned, ...recentUnpinned];
-            console.warn(`🗑️ Removed ${pinned.length - keptPinned.length} oldest pinned memories due to limit`);
-        } else {
-            finalMemories = [...pinned, ...recentUnpinned];
-        }
-
-        const removed = memories.length - finalMemories.length;
-        const tokensSaved = removed * 50; 
-
-        return { cleaned: finalMemories, removed, tokensSaved };
     }
 
     /**
@@ -305,6 +256,7 @@ export class GameStateOptimizer {
             if (entity.type === 'pc' || 
                 entity.type === 'companion' ||
                 entity.owner === 'pc' ||
+                entity.pinned ||
                 (entity.type === 'location' && mentionCounts[entity.name] > 0)) {
                 protectedEntities.add(entity.name);
             }
@@ -352,7 +304,6 @@ export class GameStateOptimizer {
      * Get cleanup statistics
      */
     static getCleanupStatistics(gameState: SaveData): {
-        memoryUsage: { pinned: number; unpinned: number; total: number };
         chronicleSize: { memoir: number; chapter: number; turn: number; total: number };
         questStatus: { active: number; completed: number; failed: number; total: number };
         statusDistribution: { [entityName: string]: number };
@@ -360,11 +311,6 @@ export class GameStateOptimizer {
         archivedEntities: number;
     } {
         const stats = {
-            memoryUsage: {
-                pinned: gameState.memories.filter(m => m.pinned).length,
-                unpinned: gameState.memories.filter(m => !m.pinned).length,
-                total: gameState.memories.length
-            },
             chronicleSize: {
                 memoir: gameState.chronicle.memoir.length,
                 chapter: gameState.chronicle.chapter.length,
@@ -398,7 +344,6 @@ export class GameStateOptimizer {
 
     public static getEmptyStats(): CleanupStats {
         return {
-            memoriesRemoved: 0,
             chronicleEntriesRemoved: 0,
             questsArchived: 0,
             statusesRemoved: 0,
@@ -417,7 +362,6 @@ export class GameStateOptimizer {
     ): { optimizedState: SaveData; stats: CleanupStats } {
         const config = aggressiveMode ? {
             ...this.DEFAULT_CONFIG,
-            maxUnpinnedMemories: 15,
             maxMemoirEntries: 10,
             maxChapterEntries: 15,
             maxTurnEntries: 20,

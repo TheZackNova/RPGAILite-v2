@@ -24,10 +24,11 @@ interface KnowledgeBaseModalProps {
     pc: Entity | undefined;
     knownEntities: KnownEntities;
     onEntityClick: (entityName: string) => void;
+    onUpdateEntity?: (entityName: string, updates: Partial<Entity>) => void;
     turnCount: number;
 }
 
-const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEntityClick, turnCount }: KnowledgeBaseModalProps) => {
+const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEntityClick, onUpdateEntity, turnCount }: KnowledgeBaseModalProps) => {
     if (!isOpen) return null;
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -55,11 +56,17 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
 
     // Toggle bookmark
     const toggleBookmark = useCallback((entityName: string) => {
-        setBookmarkedEntities(prev => ({
-            ...prev,
-            [entityName]: !prev[entityName]
-        }));
-    }, []);
+        const entity = knownEntities[entityName];
+        if (entity && onUpdateEntity) {
+            onUpdateEntity(entityName, { pinned: !entity.pinned });
+        } else {
+            // Fallback to local state if onUpdateEntity is not provided
+            setBookmarkedEntities(prev => ({
+                ...prev,
+                [entityName]: !prev[entityName]
+            }));
+        }
+    }, [knownEntities, onUpdateEntity]);
 
     // Toggle category collapse
     const toggleCategory = useCallback((category: string) => {
@@ -88,7 +95,7 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
         
         // Add bookmarked and recent categories
         const bookmarked = Object.values(knownEntities).filter(entity => 
-            bookmarkedEntities[entity.name] && entity.name !== pc?.name
+            entity.pinned && entity.name !== pc?.name
         );
         if (bookmarked.length > 0) {
             categories['bookmarked'] = bookmarked;
@@ -103,7 +110,7 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
         }
         
         return categories;
-    }, [knownEntities, pc?.name, bookmarkedEntities, entityAccess]);
+    }, [knownEntities, pc?.name, entityAccess]);
     
     const categoryTitles: { [key: string]: string } = {
         bookmarked: "⭐ Đã Đánh Dấu",
@@ -149,9 +156,9 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
 
             if (filtered.length > 0) {
                 result[category] = filtered.sort((a,b) => {
-                    // Prioritize bookmarked items
-                    if (bookmarkedEntities[a.name] && !bookmarkedEntities[b.name]) return -1;
-                    if (!bookmarkedEntities[a.name] && bookmarkedEntities[b.name]) return 1;
+                    // Prioritize pinned items
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
                     // Then by access frequency
                     const aAccess = entityAccess[a.name]?.count || 0;
                     const bAccess = entityAccess[b.name]?.count || 0;
@@ -163,7 +170,7 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
         });
 
         return result;
-    }, [debouncedSearchTerm, activeFilter, categorizedEntities, bookmarkedEntities, entityAccess]);
+    }, [debouncedSearchTerm, activeFilter, categorizedEntities, entityAccess]);
 
     const hasResults = useMemo(() => Object.keys(filteredAndCategorizedEntities).length > 0, [filteredAndCategorizedEntities]);
 
@@ -295,7 +302,6 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
                                                     entities={entities}
                                                     category={category}
                                                     knownEntities={knownEntities}
-                                                    bookmarkedEntities={bookmarkedEntities}
                                                     entityAccess={entityAccess}
                                                     onEntityClick={handleItemClick}
                                                     onToggleBookmark={toggleBookmark}
@@ -310,7 +316,7 @@ const KnowledgeBaseModalComponent = ({ isOpen, onClose, pc, knownEntities, onEnt
                                                             entity={entity}
                                                             category={category}
                                                             knownEntities={knownEntities}
-                                                            isBookmarked={bookmarkedEntities[entity.name]}
+                                                            isBookmarked={entity.pinned || false}
                                                             accessCount={entityAccess[entity.name]?.count}
                                                             onEntityClick={handleItemClick}
                                                             onToggleBookmark={toggleBookmark}
@@ -404,7 +410,6 @@ interface VirtualizedEntityListProps {
     entities: Entity[];
     category: string;
     knownEntities: KnownEntities;
-    bookmarkedEntities: BookmarkedEntities;
     entityAccess: EntityAccess;
     onEntityClick: (name: string) => void;
     onToggleBookmark: (name: string) => void;
@@ -412,7 +417,7 @@ interface VirtualizedEntityListProps {
     itemHeight: number;
 }
 
-const VirtualizedEntityListComponent = ({ entities, category, knownEntities, bookmarkedEntities, entityAccess, onEntityClick, onToggleBookmark, containerHeight, itemHeight }: VirtualizedEntityListProps) => {
+const VirtualizedEntityListComponent = ({ entities, category, knownEntities, entityAccess, onEntityClick, onToggleBookmark, containerHeight, itemHeight }: VirtualizedEntityListProps) => {
     const {
         containerRef,
         visibleItems,
@@ -442,7 +447,7 @@ const VirtualizedEntityListComponent = ({ entities, category, knownEntities, boo
                                 entity={entity}
                                 category={category}
                                 knownEntities={knownEntities}
-                                isBookmarked={bookmarkedEntities[entity.name]}
+                                isBookmarked={entity.pinned || false}
                                 accessCount={entityAccess[entity.name]?.count}
                                 onEntityClick={onEntityClick}
                                 onToggleBookmark={onToggleBookmark}

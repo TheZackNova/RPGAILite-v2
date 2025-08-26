@@ -9,7 +9,6 @@ import type { FormData } from '../types.ts';
 interface DesktopHeaderProps {
     onHome: () => void;
     onSettings: () => void;
-    onImport: () => void;
     onSave: () => void;
     onExportWorldSetup: () => void;
     onMap: () => void;
@@ -35,7 +34,7 @@ const getTokenColor = (tokens: number) => {
     return 'text-green-500 bg-green-100 dark:bg-green-900/30';
 };
 export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
-    onHome, onSettings, onImport, onSave, onExportWorldSetup, onMap, onRules, onRegexManager, onKnowledge, onMemory, onRestart,
+    onHome, onSettings, onSave, onExportWorldSetup, onMap, onRules, onRegexManager, onKnowledge, onMemory, onRestart,
     onInventory, onAdmin, hasActiveQuests, onManualCleanup,
     worldData, gameTime, turnCount, currentTurnTokens, totalTokens
 }) => {
@@ -168,9 +167,6 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 >
                     <button onClick={() => { onSettings(); setShowGameMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
                         ⚙️ Cài đặt
-                    </button>
-                    <button onClick={() => { onImport(); setShowGameMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                        📥 Nhập Entity
                     </button>
                     <div className="border-t border-slate-200 dark:border-slate-600 my-1"></div>
                     <button onClick={() => { onSave(); setShowGameMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">

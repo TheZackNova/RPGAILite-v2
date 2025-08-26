@@ -274,12 +274,6 @@ export class EnhancedRAGSystem {
         for (const [name, entity] of Object.entries(knownEntities)) {
             if (Array.isArray(party) && party.some(p => p.name === name)) continue;
             
-            // Skip lore and concept entities - they're handled by enhanced custom rules
-            if (entity.type === 'lore' || entity.type === 'concept') {
-                console.log(`🚫 Skipping ${entity.type} entity "${name}" - covered by custom rules`);
-                continue;
-            }
-            
             let score = 0;
             const reasons: string[] = [];
             
@@ -337,10 +331,9 @@ export class EnhancedRAGSystem {
             }
         }
         
-        // Sort by relevance and apply cutoffs
+        // Sort by relevance (no threshold filtering)
         return relevanceScores
-            .sort((a, b) => b.score - a.score)
-            .filter(r => r.score >= 10); // Minimum relevance threshold
+            .sort((a, b) => b.score - a.score);
     }
 
     // Calculate dynamic token budgets based on context
@@ -392,16 +385,16 @@ export class EnhancedRAGSystem {
             supplemental: ''
         };
 
-        // Critical: High-relevance entities and immediate context
+        // Critical: All entities and immediate context (no filtering by score)
         sections.critical = this.buildCriticalContext(
-            relevantEntities.filter(r => r.score >= 70),
+            relevantEntities,
             gameState,
             budget.critical
         );
 
-        // Important: Related entities, active quests, recent history
+        // Important: Additional context, active quests, recent history
         sections.important = this.buildImportantContext(
-            relevantEntities.filter(r => r.score >= 30 && r.score < 70),
+            relevantEntities,
             gameState,
             budget.important
         );
@@ -444,13 +437,9 @@ export class EnhancedRAGSystem {
             usedTokens += this.estimateTokens(partyContext);
         }
         
-        // Add remaining entities with detailed info
+        // Add remaining entities with detailed info (no filtering by type)
         const remainingBudget = tokenBudget - usedTokens;
-        const nonPartyEntities = entities.filter(e => 
-            e.entity.type !== 'companion' && 
-            e.entity.type !== 'lore' && 
-            e.entity.type !== 'concept'
-        );
+        const nonPartyEntities = entities.filter(e => e.entity.type !== 'companion');
         const tokensPerEntity = Math.floor(remainingBudget / Math.max(1, nonPartyEntities.length));
         
         nonPartyEntities.forEach(({ entity, score, reason }) => {

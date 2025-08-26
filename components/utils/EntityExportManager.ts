@@ -62,7 +62,7 @@ declare global {
 
 export class EntityExportManager {
     private static readonly DEFAULT_CONFIG: ExportConfig = {
-        enabled: true,
+        enabled: false,
         exportInterval: 7, // every 7 turns
         maxFileSize: 1024 * 1024, // 1MB
         exportPath: '/data/game-exports/',
