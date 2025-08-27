@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import type { GameHistoryEntry, SaveData, RegexRule } from '../types';
 import { buildEnhancedRagPrompt } from '../promptBuilder';
-import { EntityExportManager } from '../utils/EntityExportManager';
 import { createAutoTrimmedStoryLog } from '../utils/storyLogUtils';
 import { regexEngine, RegexPlacement } from '../utils/RegexEngine';
 
@@ -256,19 +255,37 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
         
         const userPrompt = buildEnhancedRagPrompt(originalAction, currentGameState, ruleChangeContext, nsfwInstructionPart);
         
-        // DEBUG: Log prompt details to track duplicate responses
-        console.log(`🔍 [Turn ${currentGameState.turnCount}] Action Handler Debug:`, {
+        // DEBUG: Enhanced prompt analysis for COT tracking
+        console.log(`🔍 [Turn ${currentGameState.turnCount}] Enhanced Prompt Debug:`, {
             originalAction,
             processedAction,
             timestamp: new Date().toISOString(),
             promptLength: userPrompt.length,
             promptHash: userPrompt.slice(0, 100) + '...' + userPrompt.slice(-100),
+            hasCOTInstructions: userPrompt.includes('BẮT BUỘC PHẢI SUY NGHĨ'),
+            cotStepCount: (userPrompt.match(/BƯỚC \d+/g) || []).length,
+            hasExampleFormat: userPrompt.includes('Ví dụ format'),
+            hasWarningBanner: userPrompt.includes('🚨 QUAN TRỌNG'),
             gameStateHash: `T${currentGameState.turnCount}_${currentGameState.gameTime?.year}_${currentGameState.gameTime?.month}_${currentGameState.gameTime?.day}_${currentGameState.gameTime?.hour}`
         });
+
+        // DEBUG: Show actual COT instructions if present
+        const cotStartIndex = userPrompt.indexOf('🧠 TRƯỚC KHI TẠO JSON');
+        if (cotStartIndex !== -1) {
+            const cotInstructions = userPrompt.substring(cotStartIndex, cotStartIndex + 1500); // Show more content
+            console.log(`🎯 [Turn ${currentGameState.turnCount}] COT Instructions Preview:`, cotInstructions + (cotInstructions.length === 1500 ? '...' : ''));
+        } else {
+            console.log(`⚠️ [Turn ${currentGameState.turnCount}] No COT instructions found in prompt!`);
+        }
 
         // OPTIMIZED: Store only essential user action instead of full RAG prompt for token efficiency
         const userActionMatch = userPrompt.match(/--- HÀNH ĐỘNG CỦA NGƯỜI CHƠI ---\n"([^"]+)"/);
         const userAction = userActionMatch ? userActionMatch[1] : action;
+
+        // COT Research Logging - Initialize data collection
+        const cotStartTime = Date.now();
+        const hasCOTInPrompt = userPrompt.includes('BẮT BUỘC PHẢI SUY NGHĨ');
+        const cotPromptTokens = hasCOTInPrompt ? Math.ceil(userPrompt.length * 1.2) : 0; // Simple token estimation
         const optimizedUserEntry: GameHistoryEntry = { 
             role: 'user', 
             parts: [{ text: `ACTION: ${userAction}` }] 
@@ -308,6 +325,65 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                 timestamp: new Date().toISOString()
             });
             
+            // DEBUG: Extract and log COT reasoning if present + Save for research
+            let cotReasoningResult = null;
+            try {
+                const cotReasoning = extractCOTReasoning(responseText);
+                cotReasoningResult = cotReasoning;
+                if (cotReasoning) {
+                    console.log(`🧠 [Turn ${currentGameState.turnCount}] AI Chain of Thought Reasoning:`);
+                    console.log(`   Type: ${cotReasoning.type}`);
+                    console.log(`   Note: ${cotReasoning.note || 'N/A'}`);
+                    
+                    if (cotReasoning.type === 'explicit_cot' && cotReasoning.sections) {
+                        console.log(`   Total COT Sections: ${cotReasoning.totalSections}`);
+                        cotReasoning.sections.forEach((section, index) => {
+                            console.log(`   📝 STEP ${index + 1} (${section.length} chars):`);
+                            console.log(`      ${section.content}`);
+                            console.log(''); // Empty line for readability
+                        });
+                    } else if (cotReasoning.reasoning) {
+                        console.log(`   🔍 Full Reasoning Content:`);
+                        console.log(`      ${cotReasoning.reasoning}`);
+                    } else if (cotReasoning.sections && Array.isArray(cotReasoning.sections)) {
+                        console.log(`   🔍 Reasoning Sections Found:`);
+                        cotReasoning.sections.forEach((section, index) => {
+                            console.log(`      Section ${index + 1}: ${section}`);
+                        });
+                    } else if (cotReasoning.responsePreview) {
+                        console.log(`   📋 Response Preview: ${cotReasoning.responsePreview}`);
+                    }
+                } else {
+                    // Enhanced debugging for failed extraction
+                    console.log(`🔍 [Turn ${currentGameState.turnCount}] Could not extract COT reasoning from response`);
+                    console.log(`📝 Response preview (first 1000 chars):`, responseText.substring(0, 1000));
+                    
+                    // Check if there's Vietnamese reasoning content
+                    const hasVietnameseReasoning = /(?:BƯỚC|Tôi|Suy nghĩ|Phân tích|Hành động)/i.test(responseText);
+                    console.log(`🔍 Has Vietnamese reasoning indicators:`, hasVietnameseReasoning);
+                    
+                    // Show where JSON starts
+                    const jsonStart = responseText.indexOf('{');
+                    if (jsonStart > 100) {
+                        console.log(`📋 Content before JSON (${jsonStart} chars):`, responseText.substring(0, Math.min(jsonStart, 500)));
+                    }
+                    
+                    // Create default "no COT found" result for research logging
+                    cotReasoningResult = {
+                        type: 'no_cot_found' as const,
+                        note: 'No COT reasoning detected in response - AI may be ignoring instructions',
+                        responsePreview: responseText.substring(0, 200) + '...'
+                    };
+                }
+            } catch (e) {
+                console.log(`🚨 [Turn ${currentGameState.turnCount}] Error extracting COT:`, e);
+                cotReasoningResult = {
+                    type: 'no_cot_found' as const,
+                    note: `Error extracting COT: ${e}`,
+                    responsePreview: responseText.substring(0, 200) + '...'
+                };
+            }
+            
             if (!responseText) {
                 console.error("API returned empty response text in handleAction", {
                     responseMetadata: response.usageMetadata,
@@ -336,9 +412,22 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             const isDuplicateResponse = detectDuplicateResponse(responseText, gameHistory);
             if (isDuplicateResponse) {
                 console.warn(`⚠️ [Turn ${currentGameState.turnCount}] Duplicate response detected! Regenerating...`);
-                // Add variation to force different response
-                const retryPrompt = userPrompt + `\n\n**QUAN TRỌNG**: Đây là lần thử lại do phản hồi trùng lặp. Hãy tạo nội dung HOÀN TOÀN KHÁC với lượt trước. Seed: ${Math.random()}`;
+                console.log(`🔍 Duplicate Details:`, {
+                    responseLength: responseText.length,
+                    historyEntries: gameHistory.length,
+                    action: originalAction.substring(0, 50) + '...',
+                    lastFewResponses: gameHistory.slice(-4).map(h => h.role + ': ' + h.parts[0].text.substring(0, 100))
+                });
+                // Add variation to force different response with attempt counter
+                const attemptNumber = (gameHistory.filter(h => h.parts[0].text.includes('lần thử lại')).length || 0) + 1;
+                const retryPrompt = userPrompt + `\n\n**QUAN TRỌNG**: Đây là lần thử lại #${attemptNumber} do phản hồi trùng lặp. Hãy tạo nội dung HOÀN TOÀN KHÁC với lượt trước. Tập trung vào sự sáng tạo và đa dạng. Seed: ${Math.random()}`;
                 const retryHistory = [...gameHistory, { role: 'user', parts: [{ text: retryPrompt }] }];
+                
+                // Prevent infinite loops - max 2 retries
+                if (attemptNumber >= 3) {
+                    console.warn(`⚠️ [Turn ${currentGameState.turnCount}] Max duplicate retries reached (${attemptNumber}), accepting response`);
+                    // Continue with current response to prevent infinite loop
+                } else {
                 
                 const retryResponse = await ai.models.generateContent({
                     model: selectedModel, 
@@ -363,28 +452,68 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                     setGameHistory(prev => [...prev, optimizedUserEntry, { role: 'model', parts: [{ text: responseText }] }]);
                     parseApiResponseHandler(responseText);
                 }
+                }
             } else {
                 setGameHistory(prev => [...prev, optimizedUserEntry, { role: 'model', parts: [{ text: responseText }] }]);
                 parseApiResponseHandler(responseText);
             }
             
+            // COT Research Logging - Save detailed analysis to game state
+            const cotEndTime = Date.now();
+            let parsedResponse = null;
+            try {
+                parsedResponse = JSON.parse(responseText);
+            } catch (e) {
+                // Response parsing failed, still log what we can
+            }
+            
+            const cotResearchEntry = {
+                turn: currentGameState.turnCount,
+                timestamp: new Date().toISOString(),
+                userAction: originalAction,
+                cotPromptUsed: hasCOTInPrompt,
+                cotPromptLength: hasCOTInPrompt ? userPrompt.length : undefined,
+                cotPromptTokens: hasCOTInPrompt ? cotPromptTokens : undefined,
+                aiReasoningDetected: cotReasoningResult || {
+                    type: 'no_cot_found' as const,
+                    note: 'COT analysis not available'
+                },
+                duplicateDetected: isDuplicateResponse || false,
+                duplicateRetryCount: isDuplicateResponse ? (gameHistory.filter(h => h.parts[0].text.includes('lần thử lại')).length || 0) + 1 : 0,
+                finalResponseQuality: {
+                    storyLength: parsedResponse?.story?.length || responseText.length,
+                    choicesCount: parsedResponse?.choices?.length || 0,
+                    storyTokens: parsedResponse?.story ? Math.ceil(parsedResponse.story.length * 1.2) : undefined,
+                    hasTimeElapsed: responseText.includes('TIME_ELAPSED'),
+                    hasChronicle: responseText.includes('CHRONICLE_TURN')
+                },
+                performanceMetrics: {
+                    responseTime: cotEndTime - cotStartTime,
+                    totalTokensUsed: turnTokens,
+                    promptTokens: cotPromptTokens,
+                    completionTokens: turnTokens - cotPromptTokens
+                }
+            };
+
+            // TODO: Add to game state for save file inclusion
+            // Currently disabled due to missing setGameState setter in GameActionHandlersParams
+            // setGameState(prevState => ({
+            //     ...prevState,
+            //     cotResearchLog: [
+            //         ...(prevState.cotResearchLog || []),
+            //         cotResearchEntry
+            //     ].slice(-100) // Keep last 100 entries to prevent save file bloat
+            // }));
+
+            console.log(`📊 [Turn ${currentGameState.turnCount}] COT Research Entry Saved:`, {
+                cotUsed: cotResearchEntry.cotPromptUsed,
+                reasoningType: cotResearchEntry.aiReasoningDetected.type,
+                responseQuality: `${cotResearchEntry.finalResponseQuality.choicesCount} choices, ${cotResearchEntry.finalResponseQuality.storyLength} chars`,
+                performanceMs: cotResearchEntry.performanceMetrics.responseTime
+            });
+
             setTurnCount(prev => {
                 const newTurn = prev + 1;
-                
-                // 🔄 Auto-export entities every few turns (with unique ID to prevent duplicates)
-                const exportId = `export_${newTurn}_${Date.now()}_${Math.random().toString(36)}`;
-                
-                setTimeout(async () => {
-                    try {
-                        if (EntityExportManager.shouldExport(newTurn, exportId)) {
-                            const exportSuccess = await EntityExportManager.exportEntities(currentGameState, exportId);
-                        }
-                    } catch (error) {
-                        console.error(`🚨 [Turn ${newTurn}] Entity export error (ID: ${exportId}):`, error);
-                    }
-                }, 1000); // Delay to ensure state is updated
-                
-                
                 return newTurn;
             }); 
         } catch (error: any) {
@@ -622,14 +751,27 @@ Hãy gợi ý hành động:`;
                     const currentNormalized = normalizeText(currentStory);
                     const pastNormalized = normalizeText(pastStory);
                     
-                    // Check if stories are very similar (90% similarity)
+                    // IMPROVED: Enhanced similarity detection with lower threshold and semantic analysis
                     const similarity = calculateTextSimilarity(currentNormalized, pastNormalized);
-                    if (similarity > 0.9) {
-                        console.log(`🔍 High similarity detected: ${(similarity * 100).toFixed(1)}%`);
+                    const semanticSimilarity = calculateSemanticSimilarity(currentStory, pastStory);
+
+                    // ADJUSTED: More lenient thresholds to reduce false positives
+                    if (similarity > 0.85 || semanticSimilarity > 0.9) {
+                        console.log(`🔍 High similarity detected: text=${(similarity * 100).toFixed(1)}%, semantic=${(semanticSimilarity * 100).toFixed(1)}%`);
+                        return true;
+                    }
+
+                    // Enhanced choice similarity - check for semantic duplicates with higher threshold
+                    const currentChoicesNormalized = (currentResponse.choices || []).map(normalizeChoice);
+                    const pastChoicesNormalized = (pastParsed.choices || []).map(normalizeChoice);
+                    const choiceSimilarity = compareChoiceArrays(currentChoicesNormalized, pastChoicesNormalized);
+
+                    if (choiceSimilarity > 0.8) {
+                        console.log(`🔍 Similar choices detected: ${(choiceSimilarity * 100).toFixed(1)}%`);
                         return true;
                     }
                     
-                    // Check if choices are identical
+                    // Check if choices are identical (original check)
                     if (currentChoices === pastChoices && currentChoices.length > 0) {
                         console.log(`🔍 Identical choices detected`);
                         return true;
@@ -645,6 +787,133 @@ Hãy gợi ý hành động:`;
             console.warn('Error in duplicate detection:', error);
             return false;
         }
+    };
+
+    // Enhanced semantic similarity for Vietnamese text
+    const calculateSemanticSimilarity = (story1: string, story2: string): number => {
+        if (story1 === story2) return 1.0;
+        if (story1.length === 0 || story2.length === 0) return 0.0;
+        
+        // Vietnamese semantic word groups
+        const semanticGroups = [
+            ['tấn công', 'đánh', 'chiến đấu', 'công kích', 'thi triển'],
+            ['quan sát', 'nhìn', 'xem', 'theo dõi', 'chú ý'],
+            ['nói', 'trò chuyện', 'giao tiếp', 'hỏi', 'thuyết phục'],
+            ['di chuyển', 'đi', 'chạy', 'tới', 'về'],
+            ['nghỉ', 'thư giãn', 'ngồi', 'tận hưởng'],
+            ['chạm', 'xoa', 'âu yếm', 'gần gũi'],
+            ['cảm thấy', 'nhận ra', 'ý thức', 'biết'],
+            ['mạnh mẽ', 'quyền lực', 'sức mạnh', 'năng lượng'],
+            ['đẹp', 'hấp dẫn', 'quyến rũ', 'mê hoặc']
+        ];
+        
+        // Normalize and extract key phrases
+        const normalize = (text: string) => text.toLowerCase()
+            .replace(/\[([A-Z_]+):\s*([^\]]+)\]/g, '') // Remove tags
+            .replace(/\s+/g, ' ')
+            .trim();
+            
+        const text1Normalized = normalize(story1);
+        const text2Normalized = normalize(story2);
+        
+        let semanticMatches = 0;
+        let totalConcepts = 0;
+        
+        // Check semantic group matches
+        semanticGroups.forEach(group => {
+            const hasGroup1 = group.some(word => text1Normalized.includes(word));
+            const hasGroup2 = group.some(word => text2Normalized.includes(word));
+            
+            if (hasGroup1 || hasGroup2) {
+                totalConcepts++;
+                if (hasGroup1 && hasGroup2) {
+                    semanticMatches++;
+                }
+            }
+        });
+        
+        // Check for repeated character names and locations
+        const extractEntities = (text: string) => {
+            const entities = [];
+            // Extract capitalized Vietnamese names
+            const matches = text.match(/[A-ZÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ][a-zA-ZÀ-ỹ\s]*/g);
+            if (matches) entities.push(...matches);
+            return entities;
+        };
+        
+        const entities1 = extractEntities(story1);
+        const entities2 = extractEntities(story2);
+        const commonEntities = entities1.filter(e => entities2.some(e2 => e2.includes(e) || e.includes(e2)));
+        
+        const entitySimilarity = commonEntities.length / Math.max(entities1.length, entities2.length, 1);
+        const conceptSimilarity = totalConcepts > 0 ? semanticMatches / totalConcepts : 0;
+        
+        // Weighted combination
+        return (conceptSimilarity * 0.6) + (entitySimilarity * 0.4);
+    };
+    
+    // Normalize choice text for comparison
+    const normalizeChoice = (choice: string): string => {
+        return choice.toLowerCase()
+            .replace(/\(\d+\s*(phút|giờ|ngày)\)/g, '') // Remove time indicators
+            .replace(/\(nsfw\)/gi, '') // Remove NSFW tags
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+    
+    // Compare arrays of choices for similarity
+    const compareChoiceArrays = (choices1: string[], choices2: string[]): number => {
+        if (choices1.length === 0 && choices2.length === 0) return 0;
+        if (choices1.length === 0 || choices2.length === 0) return 0;
+        
+        let similarChoices = 0;
+        const maxChoices = Math.max(choices1.length, choices2.length);
+        
+        choices1.forEach(choice1 => {
+            const bestMatch = choices2.reduce((best, choice2) => {
+                const similarity = calculateChoiceSimilarity(choice1, choice2);
+                return similarity > best ? similarity : best;
+            }, 0);
+            
+            if (bestMatch > 0.6) { // 60% threshold for choice similarity
+                similarChoices++;
+            }
+        });
+        
+        return similarChoices / maxChoices;
+    };
+    
+    // Calculate similarity between two individual choices
+    const calculateChoiceSimilarity = (choice1: string, choice2: string): number => {
+        const norm1 = normalizeChoice(choice1);
+        const norm2 = normalizeChoice(choice2);
+        
+        if (norm1 === norm2) return 1.0;
+        
+        // Check for semantic similarity in choices
+        const semanticKeywords = [
+            ['tấn công', 'đánh', 'chiến đấu'],
+            ['quan sát', 'nhìn', 'xem'],
+            ['nói', 'hỏi', 'trò chuyện'],
+            ['đi', 'di chuyển', 'tới'],
+            ['nghỉ', 'thư giãn'],
+            ['chạm', 'xoa', 'âu yếm']
+        ];
+        
+        let matchingGroups = 0;
+        let totalGroups = 0;
+        
+        semanticKeywords.forEach(keywords => {
+            const has1 = keywords.some(k => norm1.includes(k));
+            const has2 = keywords.some(k => norm2.includes(k));
+            
+            if (has1 || has2) {
+                totalGroups++;
+                if (has1 && has2) matchingGroups++;
+            }
+        });
+        
+        return totalGroups > 0 ? matchingGroups / totalGroups : 0;
     };
 
     // Simple text similarity calculation
@@ -666,10 +935,119 @@ Hãy gợi ý hành động:`;
         return matches / Math.max(words1.length, words2.length);
     };
 
+    // Extract Chain of Thought reasoning from AI response for debugging
+    const extractCOTReasoning = (responseText: string) => {
+        try {
+            // Enhanced COT patterns to catch more variations
+            const cotPatterns = [
+                // Main COT blocks
+                /CHAIN OF THOUGHT REASONING[\s\S]*?(?=\{|$)/i,
+                /SUY NGHĨ TỪNG BƯỚC[\s\S]*?(?=\{|$)/i,
+                /TRƯỚC KHI TẠO JSON[\s\S]*?(?=\{|$)/i,
+                
+                // Individual step patterns
+                /BƯỚC \d+:.*?(?=BƯỚC \d+:|JSON|$)/gis,
+                /\*\*BƯỚC \d+[\s\S]*?(?=\*\*BƯỚC|\{|$)/gi,
+                
+                // More flexible step detection
+                /(?:BƯỚC|Step) \d+.*?(?=(?:BƯỚC|Step) \d+|\{|$)/gis,
+                
+                // Vietnamese reasoning patterns - enhanced
+                /\*\*BƯỚC \d+.*?\*\*[\s\S]*?(?=\*\*BƯỚC|\{|$)/gi,
+                /BƯỚC \d+:[\s\S]*?(?=BƯỚC \d+:|\{|SAU ĐÓ|$)/gi,
+                /Tôi thấy.*?(?=Tôi thấy|BƯỚC|\{|$)/gi,
+                /Kế hoạch.*?(?=Kế hoạch|BƯỚC|\{|$)/gi,
+                /Suy nghĩ.*?(?=Suy nghĩ|BƯỚC|\{|$)/gi,
+                
+                // Catch the specific format we're seeing
+                /\*\*Sự kiện gần đây\*\*:[\s\S]*?(?=\*\*|BƯỚC|\{|$)/gi,
+                /Hành động:[\s\S]*?(?=\{|$)/gi
+            ];
+
+            const extractedSections = [];
+            
+            // Try to find any COT reasoning patterns
+            for (const pattern of cotPatterns) {
+                const matches = responseText.match(pattern);
+                if (matches) {
+                    extractedSections.push(...matches);
+                }
+            }
+            
+            if (extractedSections.length === 0) {
+                // Try to find ANY reasoning-like text before JSON
+                const beforeJsonMatch = responseText.match(/(.*?)(?=\{)/s);
+                if (beforeJsonMatch && beforeJsonMatch[1].trim().length > 50) {
+                    const beforeJson = beforeJsonMatch[1].trim();
+                    // Check for reasoning indicators
+                    if (/(?:BƯỚC|tôi|suy nghĩ|phân tích|kế hoạch|kiểm tra)/i.test(beforeJson)) {
+                        return {
+                            type: 'pre_json_reasoning',
+                            reasoning: beforeJson, // Show full reasoning content
+                            note: 'Reasoning-like content found before JSON'
+                        };
+                    }
+                }
+
+                // Try to parse JSON and look for reasoning in story field
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    try {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        if (parsed.story) {
+                            // Check if story contains reasoning markers
+                            const storyText = parsed.story;
+                            if (/BƯỚC|SUY NGHĨ|PHÂN TÍCH|tôi thấy|kế hoạch/i.test(storyText)) {
+                                return {
+                                    type: 'embedded_in_story',
+                                    reasoning: storyText, // Show full story content with reasoning
+                                    note: 'COT reasoning found embedded in story content'
+                                };
+                            }
+                        }
+                    } catch (e) {
+                        console.log('🔍 COT: Could not parse JSON for reasoning extraction');
+                    }
+                }
+                
+                // Final attempt: look for any structured thinking
+                const anyReasoningMatch = responseText.match(/(?:Tôi|Khi|Trước|Sau).*?(?=\{|$)/gis);
+                if (anyReasoningMatch && anyReasoningMatch.length > 0) {
+                    return {
+                        type: 'loose_reasoning',
+                        sections: anyReasoningMatch.map(section => section.trim()).filter(s => s.length > 20),
+                        note: 'Some reasoning-like content detected'
+                    };
+                }
+
+                return {
+                    type: 'no_cot_found',
+                    note: 'No COT reasoning detected in response - AI may be ignoring instructions',
+                    responsePreview: responseText.substring(0, 200) + '...'
+                };
+            }
+
+            return {
+                type: 'explicit_cot',
+                sections: extractedSections.map(section => ({
+                    content: section.trim(),
+                    length: section.length
+                })),
+                totalSections: extractedSections.length,
+                note: 'Explicit COT reasoning found in response'
+            };
+            
+        } catch (e) {
+            console.warn('Error extracting COT reasoning:', e);
+            return null;
+        }
+    };
+
     return {
         generateInitialStory,
         handleAction,
         handleSuggestAction,
-        detectDuplicateResponse
+        detectDuplicateResponse,
+        extractCOTReasoning
     };
 };

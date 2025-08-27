@@ -793,9 +793,56 @@ export class EnhancedRAGSystem {
             context += goalContext + "\n";
         }
         
+        // 5. NEW: Choice diversity guidance
+        const diversityContext = this.buildChoiceDiversityContext(gameState);
+        if (diversityContext) {
+            context += diversityContext + "\n";
+        }
+        
         context += "**QUAN TRỌNG**: Lựa chọn phải phù hợp với tình huống hiện tại, không lặp lại những gì đã chọn gần đây, và tạo cơ hội phát triển câu chuyện theo hướng thú vị.";
         
         return context;
+    }
+    
+    // Helper method to identify choice patterns for better tracking
+    private identifyChoicePatterns(choices: string[]): { type: string, examples: string[] }[] {
+        const patterns: { [key: string]: string[] } = {
+            'Tấn công/Chiến đấu': [],
+            'Giao tiếp/Trò chuyện': [],
+            'Di chuyển/Khám phá': [],
+            'Quan sát/Theo dõi': [],
+            'Sử dụng kỹ năng': [],
+            'Tương tác NSFW': [],
+            'Nghỉ ngơi/Thư giãn': [],
+            'Khác': []
+        };
+        
+        choices.forEach(choice => {
+            const lowerChoice = choice.toLowerCase();
+            
+            if (/tấn công|đánh|chiến đấu|thi triển|công kích/.test(lowerChoice)) {
+                patterns['Tấn công/Chiến đấu'].push(choice);
+            } else if (/nói|hỏi|trò chuyện|giao tiếp|thuyết phục|tán gẫu/.test(lowerChoice)) {
+                patterns['Giao tiếp/Trò chuyện'].push(choice);
+            } else if (/đi|di chuyển|về|tới|khám phá|tìm kiếm|rời/.test(lowerChoice)) {
+                patterns['Di chuyển/Khám phá'].push(choice);
+            } else if (/quan sát|nhìn|theo dõi|xem|kín đáo/.test(lowerChoice)) {
+                patterns['Quan sát/Theo dõi'].push(choice);
+            } else if (/sử dụng.*kỹ năng|thi triển|pháp thuật|kỹ thuật/.test(lowerChoice)) {
+                patterns['Sử dụng kỹ năng'].push(choice);
+            } else if (/nsfw|chạm|xoa|âu yếm|gần gũi|tình dục/.test(lowerChoice)) {
+                patterns['Tương tác NSFW'].push(choice);
+            } else if (/nghỉ|ngơi|thư giãn|tận hưởng|ngâm/.test(lowerChoice)) {
+                patterns['Nghỉ ngơi/Thư giãn'].push(choice);
+            } else {
+                patterns['Khác'].push(choice);
+            }
+        });
+        
+        // Return only non-empty patterns
+        return Object.entries(patterns)
+            .filter(([_, examples]) => examples.length > 0)
+            .map(([type, examples]) => ({ type, examples }));
     }
     
     // Build choice history context to avoid repetition
@@ -803,19 +850,43 @@ export class EnhancedRAGSystem {
         const choiceHistory = gameState.choiceHistory || [];
         if (choiceHistory.length === 0) return null;
         
-        // Get recent choices (last 3 turns)
-        const recentChoices = choiceHistory
-            .filter(entry => gameState.turnCount - entry.turn <= 3)
+        // IMPROVED: Get last 5 turns instead of 3, track selected choices
+        const recentEntries = choiceHistory
+            .filter(entry => gameState.turnCount - entry.turn <= 5)
+            .slice(-5); // Last 5 turn entries
+        
+        if (recentEntries.length === 0) return null;
+        
+        // Track both available choices AND what was selected
+        const selectedChoices = recentEntries
+            .filter(entry => entry.selectedChoice)
+            .map(entry => entry.selectedChoice)
+            .slice(-8); // Last 8 selected choices
+            
+        const recentChoices = recentEntries
             .flatMap(entry => entry.choices)
-            .slice(-10); // Last 10 choices max
+            .slice(-15); // Last 15 offered choices
         
-        if (recentChoices.length === 0) return null;
+        let context = "**TRÁNH LẶP LẠI - Đa dạng hóa lựa chọn:**\n";
         
-        let context = "**Tránh lặp lại các lựa chọn gần đây:**\n";
-        recentChoices.forEach((choice, index) => {
-            context += `• ${choice}\n`;
-        });
+        if (selectedChoices.length > 0) {
+            context += "Hành động đã chọn gần đây:\n";
+            selectedChoices.forEach(choice => {
+                context += `• ${choice}\n`;
+            });
+            context += "\n";
+        }
         
+        if (recentChoices.length > 0) {
+            context += "Lựa chọn đã đưa ra gần đây (tránh trùng lặp):\n";
+            // Group similar choices to show patterns
+            const choicePatterns = this.identifyChoicePatterns(recentChoices);
+            choicePatterns.forEach(pattern => {
+                context += `• Nhóm "${pattern.type}": ${pattern.examples.slice(0, 2).join(', ')}${pattern.examples.length > 2 ? '...' : ''}\n`;
+            });
+        }
+        
+        context += "\n**YÊU CẦU**: Tạo lựa chọn MỚI, KHÁC BIỆT và PHÙ HỢP với tình huống hiện tại!\n";
         return context;
     }
     
@@ -905,6 +976,286 @@ export class EnhancedRAGSystem {
         if (!pc || !pc.motivation) return null;
         
         return `**Tạo lựa chọn hướng tới mục tiêu nhân vật:**\n• Ít nhất 1-2 lựa chọn phải liên quan đến việc thực hiện mục tiêu: "${pc.motivation}"\n• Tạo cơ hội tiến gần hơn đến mục tiêu hoặc giải quyết trở ngại cản trở mục tiêu\n`;
+    }
+    
+    // NEW: Choice Diversity Engine - Add positive guidance for choice creation
+    private buildChoiceDiversityContext(gameState: SaveData): string {
+        const pc = gameState.party?.find(p => p.type === 'pc');
+        const currentLocation = pc?.location;
+        
+        let context = "\n**HƯỚNG DẪN TẠO LỰA CHỌN ĐA DẠNG:**\n";
+        
+        // Suggest different action types
+        const actionTypes = [
+            "🗣️ GIAO TIẾP: Trò chuyện, hỏi thông tin, thuyết phục",
+            "🏃 HÀNH ĐỘNG: Di chuyển, khám phá, tương tác vật thể", 
+            "⚔️ CHIẾN THUẬT: Sử dụng kỹ năng, chiến đấu, phòng thủ",
+            "🧠 CHIẾN LƯỢC: Quan sát, phân tích, lên kế hoạch",
+            "💭 NỘI TÂM: Suy nghĩ sâu, hồi tưởng, quyết định quan trọng"
+        ];
+        
+        context += "**Đảm bảo có ít nhất 2-3 loại hành động khác nhau:**\n";
+        actionTypes.slice(0, 3).forEach(type => {
+            context += `• ${type}\n`;
+        });
+        
+        // Location-specific suggestions
+        if (currentLocation) {
+            context += `\n**Khai thác địa điểm "${currentLocation}":**\n`;
+            context += `• Tạo lựa chọn phù hợp với đặc điểm và cơ hội của địa điểm này\n`;
+        }
+        
+        // Skill utilization
+        if (pc?.learnedSkills && pc.learnedSkills.length > 0) {
+            context += `\n**Sử dụng kỹ năng có sẵn:**\n`;
+            const skills = pc.learnedSkills.slice(0, 3);
+            skills.forEach(skill => {
+                context += `• Tạo cơ hội sử dụng "${skill}"\n`;
+            });
+        }
+        
+        // Companion interaction suggestions
+        const companions = gameState.party?.filter(p => p.type === 'companion') || [];
+        if (companions.length > 0) {
+            context += `\n**Tương tác với đồng hành:**\n`;
+            companions.slice(0, 2).forEach(companion => {
+                context += `• Lựa chọn phối hợp hoặc giao tiếp với ${companion.name}\n`;
+            });
+        }
+        
+        // Time and duration variety
+        context += `\n**Đa dạng thời gian thực hiện:**\n`;
+        context += `• Tạo lựa chọn ngắn hạn (15-30 phút), trung hạn (1-2 giờ), và dài hạn (nửa ngày)\n`;
+        context += `• Cân bằng giữa hành động nhanh và hoạt động suy tư\n`;
+        
+        context += `\n**LƯU Ý QUAN TRỌNG**: Mỗi lựa chọn phải:\n`;
+        context += `• DẪN ĐẾN KẾT QUẢ KHÁC NHAU hoàn toàn\n`;
+        context += `• Tạo ra các tình huống mới thú vị và không dự đoán trước\n`;
+        context += `• Phản ánh tính cách và động cơ của nhân vật\n`;
+        context += `• Có tính logic và hợp lý trong bối cảnh hiện tại\n`;
+        
+        return context;
+    }
+    
+    // ADVANCED COT: Comprehensive Chain of Thought reasoning based on sillytarven framework
+    private buildAdvancedCOTPrompt(action: string, gameState: SaveData): string {
+        const pc = gameState.party?.find(p => p.type === 'pc');
+        const companions = gameState.party?.filter(p => p.type === 'companion') || [];
+        const recentHistory = gameState.gameHistory.slice(-4); // Last 2 turns (user+model pairs)
+        
+        console.log(`🧠 COT: Building advanced COT prompt for turn ${gameState.turnCount}:`, {
+            pcName: pc?.name || 'Unknown',
+            companionCount: companions.length,
+            historyEntries: recentHistory.length,
+            actionType: this.categorizeAction(action)
+        });
+        
+        const cotPrompt = `
+🧠 TRƯỚC KHI TẠO JSON RESPONSE - BẮT BUỘC PHẢI SUY NGHĨ TỪNG BƯỚC:
+
+**BƯỚC 1: PHÂN TÍCH TÌNH HUỐNG HIỆN TẠI**
+Hãy viết ra suy nghĩ của bạn về tình huống hiện tại:
+
+① **Sự kiện gần đây**: 
+   ${this.extractRecentEvents(recentHistory)}
+
+② **Thời gian & Địa điểm**:
+   - Thời gian: ${this.formatGameTime(gameState.gameTime)}
+   - Địa điểm: ${pc?.location || 'Không xác định'}
+
+③ **Phân tích nhân vật sâu**:
+   [NHÂN VẬT CHÍNH] ${pc?.name}:
+   - Tính cách: ${pc?.personality || 'Chưa xác định'}
+   - Mục tiêu: ${pc?.motivation || 'Chưa rõ'}
+   - Trạng thái hiện tại: ${this.analyzeCharacterState(pc, gameState.statuses)}
+   
+   ${companions.length > 0 ? companions.map(comp => 
+   `[ĐỒNG HÀNH] ${comp.name}:
+   - Quan hệ với PC: ${comp.relationship || 'Bình thường'}
+   - Tính cách: ${comp.personality || 'Chưa rõ'}
+   - Trạng thái: ${this.analyzeCharacterState(comp, gameState.statuses)}`).join('\n   ') : '[Không có đồng hành]'}
+
+④ **Trạng thái cơ thể và trang phục**:
+   ${this.analyzePhysicalState(pc, gameState)}
+
+**BƯỚC 2: CHỐNG ÁP BỨC**
+Suy nghĩ về cân bằng quyền lực và tránh khuôn mẫu:
+- Cân bằng quyền lực: ${this.analyzePowerBalance(gameState)}
+- Tránh khuôn mẫu: ${this.getAntiStereotypeGuidance(gameState)}
+- Đảm bảo agency: Mọi nhân vật phải có lựa chọn có ý nghĩa
+
+**BƯỚC 3: ĐỀ CƯƠNG ĐÓNG VAI** 
+Lên kế hoạch cụ thể cho phản ứng với hành động "${action}":
+- **Phản ứng trực tiếp**: ${this.planDirectResponse(action, gameState)}
+- **2-3 diễn biến mới**: ${this.planStoryProgression(gameState)}  
+- **Kết nối với diễn biến trước**: ${this.planContinuity(recentHistory)}
+
+**BƯỚC 4: CHỐNG LƯỜI VĂNG & KHUÔN SÁO**
+Tự kiểm tra để tránh nội dung nhàm chán:
+① **Tránh phản ứng template** - KHÔNG dùng cụm từ sáo mòn
+② **Đảm bảo đối thoại tự nhiên** - Phù hợp bối cảnh và cảm xúc
+③ **Kiểm tra chất lượng lựa chọn** - Mỗi choice dẫn đến hậu quả KHÁC NHAU
+
+**BƯỚC 5: KIỂM TRA CUỐI**
+Tự hỏi bản thân:
+- Có kết nối tự nhiên với diễn biến trước không?
+- Có tránh được lặp lại pattern cũ không?  
+- Story có thúc đẩy phát triển nhân vật/mối quan hệ không?
+- Choices có đủ đa dạng và thú vị không?
+
+🎯 BẮT BUỘC: HÃY HIỂN THỊ SUY NGHĨ CỦA BẠN CHO TỪNG BƯỚC TRƯỚC KHI TẠO JSON!
+
+Ví dụ format:
+BƯỚC 1: Tôi thấy tình huống hiện tại là...
+BƯỚC 2: Về cân bằng quyền lực, tôi cần chú ý...
+BƯỚC 3: Kế hoạch của tôi là...
+BƯỚC 4: Để tránh nhàm chán, tôi sẽ...
+BƯỚC 5: Kiểm tra cuối, tôi thấy...
+
+SAU ĐÓ MỚI TẠO JSON RESPONSE.
+`;
+        
+        console.log(`✅ COT: Advanced COT prompt completed`, {
+            totalLength: cotPrompt.length,
+            estimatedTokens: this.estimateTokens(cotPrompt),
+            sections: ['Situation Analysis', 'Anti-Oppression', 'Role-Playing Outline', 'Anti-Cliché', 'Final Check'],
+            ready: true
+        });
+        
+        return cotPrompt;
+    }
+    
+    // Helper methods for COT analysis
+    private extractRecentEvents(history: GameHistoryEntry[]): string {
+        if (history.length === 0) return "Chưa có sự kiện gần đây";
+        
+        const recentEvents = [];
+        let processedEntries = 0;
+        
+        for (let i = history.length - 2; i < history.length; i++) {
+            if (i >= 0 && history[i]) {
+                const entry = history[i];
+                if (entry.role === 'user') {
+                    const action = entry.parts[0].text.replace('ACTION: ', '');
+                    recentEvents.push(`Hành động: ${action}`);
+                    processedEntries++;
+                } else if (entry.role === 'model') {
+                    try {
+                        const parsed = JSON.parse(entry.parts[0].text);
+                        if (parsed.story) {
+                            const summary = this.extractStoryContinuity(parsed.story);
+                            if (summary) {
+                                recentEvents.push(`Kết quả: ${summary}`);
+                                processedEntries++;
+                            }
+                        }
+                    } catch (e) {
+                        console.log(`🔍 COT: Could not parse model response for recent events extraction`);
+                    }
+                }
+            }
+        }
+        
+        const result = recentEvents.join(' → ') || "Bắt đầu phiêu lưu";
+        console.log(`📋 COT: Extracted recent events from ${processedEntries} entries:`, result.substring(0, 100) + (result.length > 100 ? '...' : ''));
+        return result;
+    }
+    
+    private analyzeCharacterState(character: any, statuses: any[]): string {
+        if (!character) return "Không xác định";
+        
+        const details = [];
+        if (character.realm) details.push(`Cảnh giới: ${character.realm}`);
+        
+        const charStatuses = statuses.filter(s => s.owner === character.name);
+        if (charStatuses.length > 0) {
+            details.push(`Trạng thái: ${charStatuses.map(s => s.name).join(', ')}`);
+        }
+        
+        return details.join(', ') || "Bình thường";
+    }
+    
+    private analyzePhysicalState(pc: any, gameState: SaveData): string {
+        if (!pc) return "Không xác định";
+        
+        const details = [];
+        if (pc.appearance) details.push(`Ngoại hình: ${pc.appearance}`);
+        
+        // Analyze based on recent events for physical state
+        const recentHistory = gameState.gameHistory.slice(-2);
+        let physicalState = "Tỉnh táo, khỏe mạnh";
+        
+        for (const entry of recentHistory) {
+            if (entry.role === 'model') {
+                try {
+                    const parsed = JSON.parse(entry.parts[0].text);
+                    if (parsed.story && /mệt|thương|đau|kiệt sức/.test(parsed.story)) {
+                        physicalState = "Có dấu hiệu mệt mỏi hoặc căng thẳng";
+                        break;
+                    }
+                } catch (e) {
+                    continue;
+                }
+            }
+        }
+        
+        details.push(`Trạng thái: ${physicalState}`);
+        return details.join(', ');
+    }
+    
+    private analyzePowerBalance(gameState: SaveData): string {
+        const pc = gameState.party?.find(p => p.type === 'pc');
+        const companions = gameState.party?.filter(p => p.type === 'companion') || [];
+        
+        if (companions.length === 0) return "Không có vấn đề cân bằng quyền lực";
+        
+        // Analyze power dynamics
+        const powerImbalances = [];
+        companions.forEach(comp => {
+            if (comp.realm === pc?.realm) {
+                powerImbalances.push(`${comp.name} cùng cấp với PC - tạo sự cân bằng`);
+            } else {
+                powerImbalances.push(`${comp.name} - đảm bảo có tiếng nói riêng`);
+            }
+        });
+        
+        return powerImbalances.join(', ') || "Cần chú ý cân bằng";
+    }
+    
+    private getAntiStereotypeGuidance(gameState: SaveData): string {
+        return "Tránh nhân vật phẳng, mỗi NPC có động cơ và phản ứng riêng biệt";
+    }
+    
+    private planDirectResponse(action: string, gameState: SaveData): string {
+        const actionType = this.categorizeAction(action);
+        return `Phản ứng ${actionType} phù hợp với tình huống và nhân vật`;
+    }
+    
+    private planStoryProgression(gameState: SaveData): string {
+        const suggestions = [
+            "Giới thiệu yếu tố mới hoặc NPC",
+            "Phát triển mối quan hệ hiện có",
+            "Tạo cơ hội sử dụng kỹ năng",
+            "Đặt ra thử thách nhỏ",
+            "Tiết lộ thông tin thú vị"
+        ];
+        
+        return suggestions.slice(0, 2).join(', ');
+    }
+    
+    private planContinuity(recentHistory: GameHistoryEntry[]): string {
+        if (recentHistory.length === 0) return "Bắt đầu mới";
+        
+        return "Nối tiếp tự nhiên từ diễn biến vừa rồi, không nhảy cóc";
+    }
+    
+    private categorizeAction(action: string): string {
+        const lower = action.toLowerCase();
+        if (/nói|hỏi|trò chuyện/.test(lower)) return "giao tiếp";
+        if (/tấn công|đánh|chiến đấu/.test(lower)) return "chiến đấu";
+        if (/đi|di chuyển|tới/.test(lower)) return "di chuyển";
+        if (/quan sát|nhìn|xem/.test(lower)) return "quan sát";
+        return "hành động";
     }
 
     // ENHANCED: Special handling for party members with detailed context
@@ -1033,45 +1384,59 @@ export class EnhancedRAGSystem {
         return context + "\n";
     }
 
-    // OPTIMIZED: AI-response-only history for massive token savings
+    // ENHANCED: Comprehensive history context for better story continuity
     private buildSmartHistoryContext(history: GameHistoryEntry[], maxTokens: number): string {
-        let context = "**Diễn biến gần đây:**\n";
+        let context = "**DIỄN BIẾN VÀ QUYẾT ĐỊNH GẦN ĐÂY:**\n";
         let usedTokens = this.estimateTokens(context);
         
         const storyEvents: string[] = [];
-        const lookback = Math.min(4, Math.floor(history.length / 2)); // Tăng lên 4 pairs (user+model)
+        const userActions: string[] = [];
         
-        // Chỉ xử lý AI responses - bỏ qua user prompts hoàn toàn
+        // IMPROVED: Include last 6 pairs (user + model) instead of 4
+        const lookback = Math.min(6, Math.floor(history.length / 2));
+        
+        // Process both user actions AND AI responses for full context
         for (let i = history.length - lookback * 2; i < history.length; i++) {
             const entry = history[i];
             
-            // CHỈ lấy AI responses để tiết kiệm token
-            if (entry.role === 'model') {
+            if (entry.role === 'user') {
+                // Extract user action for context
+                const actionText = entry.parts[0].text;
+                if (actionText.startsWith('ACTION:')) {
+                    const cleanAction = actionText.replace('ACTION: ', '').trim();
+                    userActions.push(`[Hành động] ${cleanAction}`);
+                }
+            } else if (entry.role === 'model') {
+                // Extract story continuity from AI response
                 try {
                     const parsed = JSON.parse(entry.parts[0].text);
-                    
-                    // Trích xuất story content từ AI response
                     if (parsed.story) {
                         const storySegment = this.extractStoryContinuity(parsed.story);
                         if (storySegment) {
-                            storyEvents.push(storySegment);
+                            storyEvents.push(`[Kết quả] ${storySegment}`);
                         }
                     }
                     
-                    // Trích xuất game state changes quan trọng
+                    // Extract important state changes
                     const stateChanges = this.extractStateChanges(parsed);
                     if (stateChanges) {
                         storyEvents.push(`[Thay đổi] ${stateChanges}`);
                     }
-                    
                 } catch (e) {
                     // Skip malformed responses
                 }
             }
         }
         
-        // Add story events với token budget thoải mái hơn
-        storyEvents.forEach(event => {
+        // Build comprehensive context alternating actions and results
+        const combined = [];
+        for (let i = 0; i < Math.max(userActions.length, storyEvents.length); i++) {
+            if (userActions[i]) combined.push(userActions[i]);
+            if (storyEvents[i]) combined.push(storyEvents[i]);
+        }
+        
+        // Add events with better token management
+        combined.slice(-8).forEach(event => { // Last 8 events (4 pairs)
             const eventTokens = this.estimateTokens(event + '\n');
             if (usedTokens + eventTokens <= maxTokens) {
                 context += event + '\n';
@@ -1079,7 +1444,8 @@ export class EnhancedRAGSystem {
             }
         });
         
-        return context + "\n";
+        context += "\n**TIẾP TỤC MẠCH TRUYỆN**: Đảm bảo câu chuyện chảy tự nhiên từ diễn biến trên!\n";
+        return context;
     }
 
     private summarizeStory(story: string): string {
@@ -1368,6 +1734,24 @@ export class EnhancedRAGSystem {
         const choiceContext = this.buildSmartChoiceContext(sections, compactContext, intelligentContext);
         if (choiceContext) {
             prompt += `\n${choiceContext}`;
+        }
+        
+        // Add advanced Chain of Thought reasoning - MANDATORY
+        const cotReasoning = this.buildAdvancedCOTPrompt(action, gameState);
+        if (cotReasoning) {
+            console.log(`🧠 [Turn ${gameState?.turnCount || 0}] COT Prompt Built:`, {
+                cotLength: cotReasoning.length,
+                cotTokens: this.estimateTokens(cotReasoning),
+                hasRecentEvents: cotReasoning.includes('Sự kiện gần đây'),
+                hasCharacterAnalysis: cotReasoning.includes('NHÂN VẬT CHÍNH'),
+                hasAntiOppression: cotReasoning.includes('CHỐNG ÁP BỨC'),
+                action: action.substring(0, 50) + (action.length > 50 ? '...' : '')
+            });
+            // PRIORITY: Place COT at the very end for maximum visibility
+            prompt += `\n\n` + "=".repeat(80) + `\n`;
+            prompt += `🚨 QUAN TRỌNG: BẮT BUỘC PHẢI THỰC HIỆN COT REASONING TRƯỚC KHI TẠO JSON!\n`;
+            prompt += "=".repeat(80) + `\n`;
+            prompt += cotReasoning;
         }
         
         // NSFW context if applicable

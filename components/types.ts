@@ -252,6 +252,38 @@ export interface SaveData {
         context?: string; // Brief context when choices were presented
     }>;
     
+    // COT Research Logging - For analyzing AI reasoning patterns
+    cotResearchLog?: Array<{
+        turn: number;
+        timestamp: string;
+        userAction: string;
+        cotPromptUsed: boolean;
+        cotPromptLength?: number;
+        cotPromptTokens?: number;
+        aiReasoningDetected: {
+            type: 'explicit_cot' | 'pre_json_reasoning' | 'embedded_in_story' | 'loose_reasoning' | 'no_cot_found';
+            sections?: Array<{content: string, length: number}>;
+            reasoning?: string;
+            note: string;
+            totalSections?: number;
+        };
+        duplicateDetected: boolean;
+        duplicateRetryCount?: number;
+        finalResponseQuality: {
+            storyLength: number;
+            choicesCount: number;
+            storyTokens?: number;
+            hasTimeElapsed: boolean;
+            hasChronicle: boolean;
+        };
+        performanceMetrics: {
+            responseTime?: number;
+            totalTokensUsed: number;
+            promptTokens?: number;
+            completionTokens?: number;
+        };
+    }>;
+    
     // Regex System
     regexRules?: RegexRule[];
     regexSettings?: {

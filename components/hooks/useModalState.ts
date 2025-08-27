@@ -15,7 +15,6 @@ export interface ModalState {
     isSidebarOpen: boolean;
     isChoicesModalOpen: boolean;
     isGameSettingsModalOpen: boolean;
-    isEntityImportModalOpen: boolean;
     isInventoryModalOpen: boolean;
     isAdminModalOpen: boolean;
     isEditItemModalOpen: boolean;
@@ -55,7 +54,6 @@ export interface ModalStateActions {
     setIsSidebarOpen: (open: boolean) => void;
     setIsChoicesModalOpen: (open: boolean) => void;
     setIsGameSettingsModalOpen: (open: boolean) => void;
-    setIsEntityImportModalOpen: (open: boolean) => void;
     setIsInventoryModalOpen: (open: boolean) => void;
     setIsAdminModalOpen: (open: boolean) => void;
     setIsEditItemModalOpen: (open: boolean) => void;
@@ -117,7 +115,6 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isChoicesModalOpen, setIsChoicesModalOpen] = useState(false);
     const [isGameSettingsModalOpen, setIsGameSettingsModalOpen] = useState(false);
-    const [isEntityImportModalOpen, setIsEntityImportModalOpen] = useState(false);
     const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
@@ -192,7 +189,6 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
         isSidebarOpen,
         isChoicesModalOpen,
         isGameSettingsModalOpen,
-        isEntityImportModalOpen,
         isInventoryModalOpen,
         isAdminModalOpen,
         isEditItemModalOpen,
@@ -227,7 +223,6 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
         setIsSidebarOpen,
         setIsChoicesModalOpen,
         setIsGameSettingsModalOpen,
-        setIsEntityImportModalOpen,
         setIsInventoryModalOpen,
         setIsAdminModalOpen,
         setIsEditItemModalOpen,
