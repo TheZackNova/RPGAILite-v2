@@ -356,10 +356,10 @@ Trước khi hoàn thành phản hồi, hãy tự kiểm tra theo thứ tự:
 
 **TARGET METRICS PER 10 TURNS:**
 - Status effects created: 8+ times (80% rule)
-- New locations: 3+ times  
-- New NPCs: 2-3 times
-- New items: 2+ times
-- New skills learned: 1-2 times
+- New locations: 7+ times  
+- New NPCs: 7-10 times
+- New items: 4+ times
+- New skills learned: 5+ times
 - Quest updates: 3+ times
 
 **FINAL REMINDER:**
