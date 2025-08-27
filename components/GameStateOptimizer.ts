@@ -44,15 +44,15 @@ export class GameStateOptimizer {
         questRetentionTurns: 50,         // Giữ quest 50 lượt sau complete
         
         // Status settings
-        maxStatusesPerEntity: 3,         // Tối đa 3 status/entity
+        maxStatusesPerEntity: 6,         // Tối đa 3 status/entity
         removeExpiredStatuses: true,     // Tự động xóa status hết hạn
         
         // Entity settings
-        maxInactiveEntities: 100,        // Giữ tối đa 100 entities không hoạt động
-        entityInactivityThreshold: 25,   // 25 lượt không mention = inactive
+        maxInactiveEntities: 200,        // Giữ tối đa 100 entities không hoạt động
+        entityInactivityThreshold: 50,   // 25 lượt không mention = inactive
         
         // Cleanup frequency
-        cleanupInterval: 10              // Cleanup mỗi 10 lượt
+        cleanupInterval: 20              // Cleanup mỗi 10 lượt
     };
 
     /**
