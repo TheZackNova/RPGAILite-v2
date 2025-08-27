@@ -170,7 +170,6 @@ Chủ động tạo quest mới và cập nhật quest hiện tại:
 - Tận dụng kỹ năng và vật phẩm của nhân vật
 - Các lựa chọn cần có khả năng thúc đẩy mạnh mẽ cốt truyện hoặc mối quan hệ với người chơi khác, hoặc thay đổi bối cảnh, tua nhanh thời gian
 - Các lựa chọn phải có khuynh hướng khác nhau
-- Bắt buộc có lựa chọn rủi ro cao/thưởng cao
 - Lựa chọn phải hiển thị thể loại, không được để tất cả các lựa chọn cùng một thể loại
 - Lựa chọn Bắt Buộc phải phù hợp thiết lập nhân vật của người chơi trừ các lựa chọn "chiến đấu"
 - Tránh các lựa chọn mang tính mệnh lệnh
