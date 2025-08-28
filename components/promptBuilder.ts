@@ -1102,7 +1102,16 @@ Lên kế hoạch cụ thể cho phản ứng với hành động "${action}":
 Tự kiểm tra để tránh nội dung nhàm chán:
 ① **Tránh phản ứng template** - KHÔNG dùng cụm từ sáo mòn
 ② **Đảm bảo đối thoại tự nhiên** - Phù hợp bối cảnh và cảm xúc
-③ **Kiểm tra chất lượng lựa chọn** - Mỗi choice dẫn đến hậu quả KHÁC NHAU
+
+**BƯỚC 4B: THIẾT KẾ LỰA CHỌN THEO YÊU CẦU**
+Phân tích và tạo lựa chọn tuân thủ strict requirements:
+① **Đa dạng thể loại (7-9 lựa chọn)**: hành động, xã hội, thăm dò, chiến đấu, tua nhanh thời gian, chuyển cảnh, nsfw(nếu enabled)
+② **Tận dụng assets**: kiểm tra kỹ năng + vật phẩm của PC, tạo lựa chọn sử dụng chúng
+③ **Thúc đẩy cốt truyện**: mỗi choice phải có potential thay đổi mối quan hệ/bối cảnh/thời gian
+④ **Character consistency**: lựa chọn phù hợp tính cách PC (trừ lựa chọn chiến đấu)
+⑤ **Information limitation**: chỉ dùng thông tin PC biết, tối đa 30 từ/choice
+⑥ **Avoiding commands**: không dùng giọng điệu mệnh lệnh
+⑦ **Category labeling**: hiển thị rõ thể loại [Hành Động], [Xã Hội], etc.
 
 **BƯỚC 5: KIỂM TRA CUỐI**
 Tự hỏi bản thân:
@@ -1114,7 +1123,7 @@ Tự hỏi bản thân:
 **CUỐI CÙNG**: Tạo JSON response với tất cả suy nghĩ trên trong field "cot_reasoning":
 
 {
-  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC BỐN: [Sáng tạo]... BƯỚC NĂM: [Kiểm tra cuối]",
+  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC BỐN: [Sáng tạo]... BƯỚC 4B: [Thiết kế lựa chọn theo yêu cầu]... BƯỚC NĂM: [Kiểm tra cuối]",
   "story": "...",
   "choices": [...]
 }
@@ -1126,7 +1135,7 @@ Tự hỏi bản thân:
 **FORMAT CỤ THỂ - BẮT BUỘC THEO ĐÚNG**:
 
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
   "story": "...",
   "choices": [...]
 }
@@ -1771,7 +1780,7 @@ YOU MUST INCLUDE "cot_reasoning" FIELD WITH YOUR THINKING!
 
 Example JSON:
 {
-  "cot_reasoning": "BƯỚC MỘT: Analyzing current situation... BƯỚC HAI: Considering power dynamics... BƯỚC BA: My strategy is...",
+  "cot_reasoning": "BƯỚC MỘT: Analyzing current situation... BƯỚC HAI: Considering power dynamics... BƯỚC BA: My strategy is... BƯỚC 4B: For choices, I need 7-9 diverse categories...",
   "story": "...",
   "choices": [...]
 }
@@ -1927,7 +1936,7 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
 
 **FORMAT CỤ THỂ**:
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
   "story": "...",
   "choices": [...]
 }

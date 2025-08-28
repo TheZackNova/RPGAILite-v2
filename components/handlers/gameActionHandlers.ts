@@ -35,6 +35,9 @@ export interface GameActionHandlersParams {
     // Choice history tracking
     updateChoiceHistory: (choices: string[], selectedChoice?: string, context?: string) => void;
     
+    // COT Research logging
+    updateCOTResearchLog: (entry: any) => void;
+    
     // High token usage cooldown
     triggerHighTokenCooldown: () => void;
 }
@@ -46,7 +49,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
-        updateChoiceHistory, triggerHighTokenCooldown
+        updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
     } = params;
 
     // Create auto-trimmed story log functions
@@ -495,15 +498,8 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                 }
             };
 
-            // TODO: Add to game state for save file inclusion
-            // Currently disabled due to missing setGameState setter in GameActionHandlersParams
-            // setGameState(prevState => ({
-            //     ...prevState,
-            //     cotResearchLog: [
-            //         ...(prevState.cotResearchLog || []),
-            //         cotResearchEntry
-            //     ].slice(-100) // Keep last 100 entries to prevent save file bloat
-            // }));
+            // Add to save file through callback
+            updateCOTResearchLog(cotResearchEntry);
 
             console.log(`📊 [Turn ${currentGameState.turnCount}] COT Research Entry Saved:`, {
                 cotUsed: cotResearchEntry.cotPromptUsed,
@@ -684,13 +680,26 @@ Hãy gợi ý hành động:`;
                 }
             }
             
-            // Extract and log COT reasoning if present
+            // Extract and log COT reasoning if present + Create research log entry
+            let cotReasoningForResearch = null;
             if (jsonResponse.cot_reasoning) {
                 console.log("🧠 AI Chain of Thought Reasoning:");
                 console.log(jsonResponse.cot_reasoning);
                 console.log("✅ COT reasoning found and logged from cot_reasoning field");
+                
+                // Create research log entry for the cot_reasoning field
+                cotReasoningForResearch = {
+                    type: 'cot_reasoning_field' as const,
+                    reasoning: jsonResponse.cot_reasoning,
+                    cotReasoningField: jsonResponse.cot_reasoning,
+                    note: 'COT reasoning successfully extracted from cot_reasoning JSON field'
+                };
             } else {
                 console.log("⚠️ No COT reasoning found in cot_reasoning field");
+                cotReasoningForResearch = {
+                    type: 'no_cot_found' as const,
+                    note: 'No COT reasoning found in cot_reasoning field - AI may be ignoring instructions'
+                };
             }
             
             // Validate required fields
@@ -982,7 +991,26 @@ Hãy gợi ý hành động:`;
                 /Hành động:[\s\S]*?(?=\{|$)/gi
             ];
 
-            // First, check for explicit COT_REASONING tags (highest priority)
+            // First, check for cot_reasoning JSON field (highest priority)
+            try {
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const jsonResponse = JSON.parse(jsonMatch[0]);
+                    if (jsonResponse.cot_reasoning) {
+                        console.log('✅ Found cot_reasoning field with content:', jsonResponse.cot_reasoning.substring(0, 200) + '...');
+                        return {
+                            type: 'cot_reasoning_field',
+                            reasoning: jsonResponse.cot_reasoning,
+                            cotReasoningField: jsonResponse.cot_reasoning,
+                            note: 'COT reasoning found in cot_reasoning JSON field'
+                        };
+                    }
+                }
+            } catch (e) {
+                // JSON parsing failed, continue with other patterns
+            }
+            
+            // Second, check for explicit COT_REASONING tags
             const cotReasoningMatch = responseText.match(/\[COT_REASONING\]([\s\S]*?)\[\/COT_REASONING\]/);
             if (cotReasoningMatch) {
                 const cotContent = cotReasoningMatch[1].trim();

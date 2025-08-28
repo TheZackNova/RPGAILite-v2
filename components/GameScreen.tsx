@@ -122,7 +122,7 @@ export const GameScreen: React.FC<{
     const {
         worldData, knownEntities, statuses, quests, gameHistory, memories, party,
         customRules, regexRules, systemInstruction, chronicle, gameTime, turnCount, currentTurnTokens,
-        totalTokens, storyLog, choices, locationDiscoveryOrder, choiceHistory, isLoading,
+        totalTokens, storyLog, choices, locationDiscoveryOrder, choiceHistory, cotResearchLog, isLoading,
         hasGeneratedInitialStory, customAction
     } = gameState;
 
@@ -130,7 +130,7 @@ export const GameScreen: React.FC<{
         setWorldData, setKnownEntities, setStatuses, setQuests, setGameHistory, setMemories,
         setParty, setCustomRules, setRegexRules, setSystemInstruction, setChronicle, setGameTime,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setStoryLog, setChoices,
-        setLocationDiscoveryOrder, updateChoiceHistory, setIsLoading, setHasGeneratedInitialStory, setCustomAction
+        setLocationDiscoveryOrder, updateChoiceHistory, setCotResearchLog, setIsLoading, setHasGeneratedInitialStory, setCustomAction
     } = gameStateActions;
 
     // Create auto-trimmed story log for main story updates
@@ -214,6 +214,14 @@ export const GameScreen: React.FC<{
         }
     }, [currentTurnTokens, setNotification]);
 
+    // COT Research Log callback
+    const updateCOTResearchLog = useCallback((entry: any) => {
+        setCotResearchLog(prev => [
+            ...prev,
+            entry
+        ].slice(-100)); // Keep last 100 entries to prevent save file bloat
+    }, [setCotResearchLog]);
+
     // Initialize game action handlers
     const gameActionHandlers = useMemo(() => createGameActionHandlers({
         ai, selectedModel, systemInstruction, responseSchema,
@@ -221,8 +229,8 @@ export const GameScreen: React.FC<{
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
-        updateChoiceHistory, triggerHighTokenCooldown
-    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, triggerHighTokenCooldown]);
+        updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
+    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown]);
 
     // Function to get current game state
     const getCurrentGameState = useCallback((): SaveData => {
@@ -242,9 +250,11 @@ export const GameScreen: React.FC<{
             gameTime,
             chronicle,
             storyLog,
-            choices: choices
+            choices: choices,
+            choiceHistory,
+            cotResearchLog
         };
-    }, [worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, storyLog, choices]);
+    }, [worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, regexRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, storyLog, choices, choiceHistory, cotResearchLog]);
 
     // Initialize entity handlers  
     const entityHandlers = useMemo(() => createEntityHandlers({

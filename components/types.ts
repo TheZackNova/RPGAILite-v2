@@ -261,9 +261,10 @@ export interface SaveData {
         cotPromptLength?: number;
         cotPromptTokens?: number;
         aiReasoningDetected: {
-            type: 'explicit_cot' | 'pre_json_reasoning' | 'embedded_in_story' | 'loose_reasoning' | 'no_cot_found';
+            type: 'explicit_cot' | 'pre_json_reasoning' | 'embedded_in_story' | 'loose_reasoning' | 'no_cot_found' | 'cot_reasoning_field';
             sections?: Array<{content: string, length: number}>;
             reasoning?: string;
+            cotReasoningField?: string; // NEW: For the cot_reasoning JSON field
             note: string;
             totalSections?: number;
         };

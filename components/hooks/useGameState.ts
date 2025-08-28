@@ -33,6 +33,21 @@ export interface GameState {
         context?: string;
     }>;
     
+    // COT Research logging
+    cotResearchLog: Array<{
+        turn: number;
+        timestamp: string;
+        userAction: string;
+        cotPromptUsed: boolean;
+        cotPromptLength?: number;
+        cotPromptTokens?: number;
+        aiReasoningDetected: any;
+        duplicateDetected: boolean;
+        duplicateRetryCount?: number;
+        finalResponseQuality: any;
+        performanceMetrics: any;
+    }>;
+    
     // UI state
     isLoading: boolean;
     hasGeneratedInitialStory: boolean;
@@ -64,6 +79,9 @@ export interface GameStateActions {
     setChoices: (choices: string[]) => void;
     setLocationDiscoveryOrder: (order: string[] | ((prev: string[]) => string[])) => void;
     updateChoiceHistory: (choices: string[], selectedChoice?: string, context?: string) => void;
+    
+    // COT Research logging setter
+    setCotResearchLog: (log: any[] | ((prev: any[]) => any[])) => void;
     
     // UI state setters
     setIsLoading: (loading: boolean) => void;
@@ -164,6 +182,19 @@ export const useGameState = (
         selectedChoice?: string;
         context?: string;
     }>>(initialGameState.choiceHistory || []);
+    const [cotResearchLog, setCotResearchLog] = useState<Array<{
+        turn: number;
+        timestamp: string;
+        userAction: string;
+        cotPromptUsed: boolean;
+        cotPromptLength?: number;
+        cotPromptTokens?: number;
+        aiReasoningDetected: any;
+        duplicateDetected: boolean;
+        duplicateRetryCount?: number;
+        finalResponseQuality: any;
+        performanceMetrics: any;
+    }>>(initialGameState.cotResearchLog || []);
     
     // UI state
     const [isLoading, setIsLoading] = useState(initialGameState.gameHistory.length === 0 && isAiReady);
@@ -206,6 +237,7 @@ export const useGameState = (
         choices,
         locationDiscoveryOrder,
         choiceHistory,
+        cotResearchLog,
         isLoading,
         hasGeneratedInitialStory,
         customAction
@@ -231,6 +263,7 @@ export const useGameState = (
         setChoices,
         setLocationDiscoveryOrder,
         updateChoiceHistory,
+        setCotResearchLog,
         setIsLoading,
         setHasGeneratedInitialStory,
         setCustomAction
