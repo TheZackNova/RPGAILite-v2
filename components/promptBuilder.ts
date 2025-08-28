@@ -425,6 +425,11 @@ export class EnhancedRAGSystem {
         let context = "=== TRI THỨC QUAN TRỌNG ===\n";
         let usedTokens = this.estimateTokens(context);
         
+        // Add Vietnamese choice instructions at the beginning of critical context
+        const choiceInstructions = this.buildCoreGameInstructions();
+        context += "\n" + choiceInstructions + "\n\n";
+        usedTokens += this.estimateTokens(choiceInstructions);
+        
         // Add time and turn info
         const timeInfo = this.formatGameTime(gameState.gameTime, gameState.turnCount);
         context += timeInfo + "\n\n";
@@ -1662,6 +1667,70 @@ SAU ĐÓ MỚI TẠO JSON RESPONSE.
         }
 
         return formattedContext;
+    }
+    
+    /**
+     * Build core game instructions that should always be included in AI prompts
+     * These are the fundamental rules for choice generation and game mechanics
+     */
+    private buildCoreGameInstructions(): string {
+        return `--- QUY TẮC TƯƠNG TÁC ---
+
+**1. LỰA CHỌN HÀNH ĐỘNG:**
+- Tạo 7-9 lựa chọn đa dạng: hành động, xã hội, thăm dó, chiến đấu, tua nhanh thời gian, chuyển cảnh, nsfw(nếu được bật)
+- Tận dụng kỹ năng và vật phẩm của nhân vật
+- Các lựa chọn cần có khả năng thúc đẩy mạnh mẽ cốt truyện hoặc mối quan hệ với người chơi khác, hoặc thay đổi bối cảnh, tua nhanh thời gian
+- Các lựa chọn phải có khuynh hướng khác nhau
+- Lựa chọn BẮT BUỘC PHẢI hiển thị thể loại, không được để tất cả các lựa chọn cùng một thể loại
+- Lựa chọn Bắt Buộc phải phù hợp thiết lập nhân vật của người chơi trừ các lựa chọn "chiến đấu"
+- Tránh các lựa chọn mang tính mệnh lệnh
+- Lựa chọn không được chứa thông tin mà nhân vật người chơi không biết. Mỗi lựa chọn tối đa 30 chữ.
+
+**🕒 BẮT BUỘC - HIỂN THỊ THỜI GIAN CHO MỖI LỰA CHỌN:**
+- **MỌI lựa chọn hành động PHẢI bao gồm thời gian ước tính trong dấu ngoặc đơn**
+- **Format bắt buộc:** "Mô tả hành động (X giờ)" hoặc "Mô tả hành động (X ngày)"
+- **Ví dụ:**
+  * "Khám phá khu rừng gần đây (2 giờ)"
+  * "Đi đến thị trấn tiếp theo (1 ngày)"  
+  * "Trò chuyện với thương gia (30 phút)"
+  * "Luyện tập võ công (3 giờ)"
+  * "Nghỉ ngơi và hồi phục (8 giờ)"
+- **Thêm nhãn NSFW:** Nếu có lựa chọn 18+, thêm "(NSFW)" sau thời gian: "Qua đêm với X (8 giờ) (NSFW)"
+- **Nguyên tắc thời gian:**
+  * Trò chuyện/quan sát: 5-15 phút
+  * Kiểm tra vật phẩm, kỹ năng: 5-10 phút
+  * Hành động nhanh: 15-30 phút
+  * Đi bộ: 30-60 phút
+  * Dịch chuyển: 1-5 phút
+  * Di chuyển ngắn: 1-2 giờ  
+  * Hoạt động phức tạp: 2-4 giờ
+  * Di chuyển xa: 4-8 giờ hoặc 1+ ngày
+  * Nghỉ ngơi/ngủ: 6-8 giờ
+
+**2. KẾT QUẢ HÀNH ĐỘNG:**
+- KHÔNG đảm bảo thành công
+- Luôn luôn suy luận để quyết định kết quả
+- Hậu quả logic dựa trên kỹ năng và hoàn cảnh, không nên bị động xoay quanh người chơi.
+
+**3. CHIẾN ĐẤU:**
+- Theo từng lượt, không giải quyết nhanh
+- Kẻ địch cũng có hành động và trạng thái
+- Mô tả chi tiết và tạo tension
+
+**4. THẾ GIỚI PHẢN ỨNG:**
+- NPCs phản ứng với hành động của PC
+- Môi trường thay đổi theo thời gian
+- Sự kiện ngẫu nhiên và tình huống bất ngờ
+
+--- ĐỊNH DẠNG VĂN BẢN ---
+
+**1. LỜI KỂ:**
+- 250-350 từ, chi tiết và sống động
+- Sử dụng \`...\` cho suy nghĩ nội tâm
+- \`**⭐...⭐**\` CHỈ cho thông báo hệ thống quan trọng (KHÔNG dùng cho tên skills, concepts, statuses, hay items)
+- Format \`⭐...⭐\` (không bold) BẮT BUỘC cho nội dung Chronicle Turn
+- Tôn trong tính cách các NPC, không phải luôn luôn xoay quanh, chiều lòng người chơi.
+- Chủ động xây dựng các sự kiện đột phát giữa các lượt sau một thời gian nhất định(theo GameTime) như cướp bóc, ám sát, tỏ tình, cầu hôn....`;
     }
 
 

@@ -166,11 +166,11 @@ Chủ động tạo quest mới và cập nhật quest hiện tại:
 --- QUY TẮC TƯƠNG TÁC ---
 
 **1. LỰA CHỌN HÀNH ĐỘNG:**
-- Tạo 4-9 lựa chọn đa dạng: hành động, xã hội, thăm dó, chiến đấu, tua nhanh thời gian, chuyển cảnh, nsfw(nếu được bật)
+- Tạo 7-9 lựa chọn đa dạng: hành động, xã hội, thăm dó, chiến đấu, tua nhanh thời gian, chuyển cảnh, nsfw(nếu được bật)
 - Tận dụng kỹ năng và vật phẩm của nhân vật
 - Các lựa chọn cần có khả năng thúc đẩy mạnh mẽ cốt truyện hoặc mối quan hệ với người chơi khác, hoặc thay đổi bối cảnh, tua nhanh thời gian
 - Các lựa chọn phải có khuynh hướng khác nhau
-- Lựa chọn phải hiển thị thể loại, không được để tất cả các lựa chọn cùng một thể loại
+- Lựa chọn BẮT BUỘC PHẢI hiển thị thể loại, không được để tất cả các lựa chọn cùng một thể loại
 - Lựa chọn Bắt Buộc phải phù hợp thiết lập nhân vật của người chơi trừ các lựa chọn "chiến đấu"
 - Tránh các lựa chọn mang tính mệnh lệnh
 - Lựa chọn không được chứa thông tin mà nhân vật người chơi không biết. Mỗi lựa chọn tối đa 30 chữ.
