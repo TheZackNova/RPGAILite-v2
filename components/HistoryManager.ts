@@ -11,6 +11,8 @@ export interface CompressedHistorySegment {
     summary: string;              // Tóm tắt những gì đã xảy ra
     keyActions: string[];         // Các hành động quan trọng
     importantEvents: string[];    // Các sự kiện quan trọng
+    recentChoices: string[];      // ADDED: Preserve recent choices to prevent duplication
+    storyFlow: string[];          // ADDED: Preserve story flow patterns
     tokenCount: number;           // Ước tính token count
     compressedAt: number;         // Turn number khi được compress
 }
@@ -103,13 +105,15 @@ export class HistoryManager {
     ): CompressedHistorySegment {
         const keyActions: string[] = [];
         const importantEvents: string[] = [];
+        const recentChoices: string[] = [];       // NEW: Store recent choices
+        const storyFlow: string[] = [];           // NEW: Store story flow patterns
         
         // Ước tính turn range
         const segmentTurns = Math.floor(entries.length / 2); // 2 entries per turn
         const startTurn = Math.max(1, currentTurn - segmentTurns - Math.floor(config.maxActiveEntries / 2));
         const endTurn = currentTurn - Math.floor(config.maxActiveEntries / 2);
 
-        // Extract information từ entries
+        // Extract information từ entries - IMPROVED to preserve choices and story flow
         entries.forEach((entry, index) => {
             if (entry.role === 'user') {
                 // Extract player actions
@@ -128,6 +132,24 @@ export class HistoryManager {
                     if (parsed.story) {
                         const events = this.extractImportantEvents(parsed.story);
                         importantEvents.push(...events);
+                        
+                        // NEW: Extract story flow patterns (last sentences for continuity)
+                        const storyLines = parsed.story.split(/[.!?]+/).filter((line: string) => line.trim().length > 10);
+                        if (storyLines.length > 0) {
+                            const lastLine = storyLines[storyLines.length - 1].trim();
+                            if (lastLine.length > 0 && storyFlow.length < 5) {
+                                storyFlow.push(lastLine);
+                            }
+                        }
+                    }
+                    
+                    // NEW: Extract choices to prevent duplication
+                    if (parsed.choices && Array.isArray(parsed.choices)) {
+                        parsed.choices.forEach((choice: string) => {
+                            if (choice && choice.trim().length > 0 && recentChoices.length < 10) {
+                                recentChoices.push(choice.trim());
+                            }
+                        });
                     }
                 } catch (e) {
                     // Skip invalid JSON responses
@@ -138,14 +160,19 @@ export class HistoryManager {
         // Tạo summary
         const summary = this.createSummary(keyActions, importantEvents, startTurn, endTurn, config.summaryLength);
         
-        // Estimate token count
-        const tokenCount = this.estimateTokens(summary + keyActions.join(' ') + importantEvents.join(' '));
+        // Estimate token count - UPDATED to include new fields
+        const tokenCount = this.estimateTokens(
+            summary + keyActions.join(' ') + importantEvents.join(' ') + 
+            recentChoices.join(' ') + storyFlow.join(' ')
+        );
         
         console.log(`📄 Compressed Segment Created:`, {
             turnRange: `${startTurn}-${endTurn}`,
             entriesCompressed: entries.length,
             keyActionsFound: keyActions.length,
             importantEventsFound: importantEvents.length,
+            choicesPreserved: recentChoices.length,           // NEW
+            storyFlowPreserved: storyFlow.length,             // NEW
             summaryLength: summary.length,
             estimatedTokens: tokenCount
         });
@@ -155,6 +182,8 @@ export class HistoryManager {
             summary,
             keyActions: keyActions.slice(0, 10), // Max 10 key actions
             importantEvents: importantEvents.slice(0, 10), // Max 10 events
+            recentChoices: recentChoices.slice(0, 8),     // NEW: Max 8 recent choices
+            storyFlow: storyFlow.slice(0, 3),             // NEW: Max 3 story flow patterns
             tokenCount,
             compressedAt: currentTurn
         };

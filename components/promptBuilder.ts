@@ -850,17 +850,30 @@ export class EnhancedRAGSystem {
             .map(([type, examples]) => ({ type, examples }));
     }
     
-    // Build choice history context to avoid repetition
+    // Build choice history context to avoid repetition - ENHANCED with compressed history
     private buildChoiceHistoryContext(gameState: SaveData): string | null {
         const choiceHistory = gameState.choiceHistory || [];
-        if (choiceHistory.length === 0) return null;
+        const compressedHistory = gameState.compressedHistory || [];
         
         // IMPROVED: Get last 5 turns instead of 3, track selected choices
         const recentEntries = choiceHistory
             .filter(entry => gameState.turnCount - entry.turn <= 5)
             .slice(-5); // Last 5 turn entries
         
-        if (recentEntries.length === 0) return null;
+        // NEW: Extract choices from compressed history to maintain long-term memory
+        const compressedChoices: string[] = [];
+        if (compressedHistory.length > 0) {
+            // Get choices from the most recent compressed segments
+            const recentCompressed = compressedHistory.slice(-2); // Last 2 compressed segments
+            recentCompressed.forEach(segment => {
+                if (segment.recentChoices) {
+                    compressedChoices.push(...segment.recentChoices);
+                }
+            });
+        }
+        
+        // If no recent entries and no compressed choices, return null
+        if (recentEntries.length === 0 && compressedChoices.length === 0) return null;
         
         // Track both available choices AND what was selected
         const selectedChoices = recentEntries
@@ -872,6 +885,10 @@ export class EnhancedRAGSystem {
             .flatMap(entry => entry.choices)
             .slice(-15); // Last 15 offered choices
         
+        // ENHANCED: Combine recent choices with compressed history choices
+        const allChoices = [...compressedChoices, ...recentChoices];
+        const uniqueChoices = [...new Set(allChoices)].slice(-20); // Max 20 unique choices
+        
         let context = "**TRÁNH LẶP LẠI - Đa dạng hóa lựa chọn:**\n";
         
         if (selectedChoices.length > 0) {
@@ -882,13 +899,18 @@ export class EnhancedRAGSystem {
             context += "\n";
         }
         
-        if (recentChoices.length > 0) {
-            context += "Lựa chọn đã đưa ra gần đây (tránh trùng lặp):\n";
+        if (uniqueChoices.length > 0) {
+            context += "Lựa chọn đã đưa ra (bao gồm lịch sử nén - tránh trùng lặp):\n";
             // Group similar choices to show patterns
-            const choicePatterns = this.identifyChoicePatterns(recentChoices);
+            const choicePatterns = this.identifyChoicePatterns(uniqueChoices);
             choicePatterns.forEach(pattern => {
                 context += `• Nhóm "${pattern.type}": ${pattern.examples.slice(0, 2).join(', ')}${pattern.examples.length > 2 ? '...' : ''}\n`;
             });
+            
+            // NEW: Show compressed segment info for context
+            if (compressedChoices.length > 0) {
+                context += `\n*Đã tích hợp ${compressedChoices.length} lựa chọn từ lịch sử nén để tránh lặp lại*\n`;
+            }
         }
         
         context += "\n**YÊU CẦU**: Tạo lựa chọn MỚI, KHÁC BIỆT và PHÙ HỢP với tình huống hiện tại!\n";
@@ -1415,13 +1437,29 @@ Tự hỏi bản thân:
         return context + "\n";
     }
 
-    // ENHANCED: Comprehensive history context for better story continuity
+    // ENHANCED: Comprehensive history context for better story continuity with compressed data
     private buildSmartHistoryContext(history: GameHistoryEntry[], maxTokens: number): string {
         let context = "**DIỄN BIẾN VÀ QUYẾT ĐỊNH GẦN ĐÂY:**\n";
         let usedTokens = this.estimateTokens(context);
         
         const storyEvents: string[] = [];
         const userActions: string[] = [];
+        
+        // NEW: Include story flow from compressed history for continuity
+        const gameState = this.currentGameState;
+        if (gameState?.compressedHistory?.length > 0) {
+            const recentCompressed = gameState.compressedHistory.slice(-1); // Most recent segment
+            recentCompressed.forEach(segment => {
+                if (segment.storyFlow && segment.storyFlow.length > 0) {
+                    context += `**NGỮ CẢNH TỪ LỊCH SỬ NÉN (${segment.turnRange}):**\n`;
+                    segment.storyFlow.forEach(flow => {
+                        context += `• ${flow}\n`;
+                        usedTokens += this.estimateTokens(flow) + 5;
+                    });
+                    context += "\n";
+                }
+            });
+        }
         
         // IMPROVED: Include last 6 pairs (user + model) instead of 4
         const lookback = Math.min(6, Math.floor(history.length / 2));
