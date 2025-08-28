@@ -635,6 +635,12 @@ Hãy gợi ý hành động:`;
                 // First, try to fix common JSON issues
                 let fixedText = cleanText;
                 
+                // Fix trailing commas
+                fixedText = fixedText.replace(/,(\s*[}\]])/g, '$1');
+                
+                // Fix unescaped backslashes
+                fixedText = fixedText.replace(/\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})/g, '\\\\');
+                
                 // Fix unterminated strings by ensuring all quotes are properly closed
                 const quotes = fixedText.match(/"/g);
                 if (quotes && quotes.length % 2 !== 0) {
@@ -643,10 +649,28 @@ Hãy gợi ý hành động:`;
                     fixedText = fixedText + '"';
                 }
                 
+                // Fix missing closing braces/brackets by counting them
+                const openBraces = (fixedText.match(/\{/g) || []).length;
+                const closeBraces = (fixedText.match(/\}/g) || []).length;
+                const openBrackets = (fixedText.match(/\[/g) || []).length;
+                const closeBrackets = (fixedText.match(/\]/g) || []).length;
+                
+                // Add missing closing braces
+                for (let i = 0; i < openBraces - closeBraces; i++) {
+                    fixedText += '}';
+                }
+                
+                // Add missing closing brackets
+                for (let i = 0; i < openBrackets - closeBrackets; i++) {
+                    fixedText += ']';
+                }
+                
                 // Try to parse the fixed JSON
                 jsonResponse = JSON.parse(fixedText);
             } catch (parseError: any) {
                 console.error("JSON parse error:", parseError.message);
+                console.error("Failed JSON text (first 500 chars):", fixedText.substring(0, 500));
+                console.error("Character at error position:", fixedText.charAt(parseError.message.match(/position (\d+)/)?.[1] || 0));
                 console.log("Attempting to salvage response...");
                 
                 // Try to extract story and choices manually if JSON parsing fails
