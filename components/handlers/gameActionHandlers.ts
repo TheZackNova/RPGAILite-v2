@@ -597,10 +597,16 @@ Hãy gợi ý hành động:`;
                 return;
             }
             
-            // Clean the response text to remove any non-JSON content
+            // Clean the response text while preserving COT reasoning
             let cleanText = text.trim();
             
-            // If response starts with markdown code block, extract JSON
+            console.log("🔍 Raw AI Response (first 500 chars):", cleanText.substring(0, 500));
+            
+            // Check if response contains COT reasoning
+            const hasCOTReasoning = cleanText.includes('[COT_REASONING]');
+            console.log("🧠 COT Reasoning detected in response:", hasCOTReasoning);
+            
+            // If response starts with markdown code block, extract content
             if (cleanText.startsWith('```json')) {
                 const jsonMatch = cleanText.match(/```json\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
@@ -613,7 +619,7 @@ Hãy gợi ý hành động:`;
                 }
             }
             
-            // Try to find JSON object if response has extra text
+            // Extract JSON for parsing
             const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 cleanText = jsonMatch[0];
@@ -676,6 +682,15 @@ Hãy gợi ý hành động:`;
                     setChoices([]);
                     return;
                 }
+            }
+            
+            // Extract and log COT reasoning if present
+            if (jsonResponse.cot_reasoning) {
+                console.log("🧠 AI Chain of Thought Reasoning:");
+                console.log(jsonResponse.cot_reasoning);
+                console.log("✅ COT reasoning found and logged from cot_reasoning field");
+            } else {
+                console.log("⚠️ No COT reasoning found in cot_reasoning field");
             }
             
             // Validate required fields
@@ -940,6 +955,9 @@ Hãy gợi ý hành động:`;
         try {
             // Enhanced COT patterns to catch more variations
             const cotPatterns = [
+                // NEW: Explicit COT_REASONING tags (highest priority)
+                /\[COT_REASONING\]([\s\S]*?)\[\/COT_REASONING\]/i,
+                
                 // Main COT blocks
                 /CHAIN OF THOUGHT REASONING[\s\S]*?(?=\{|$)/i,
                 /SUY NGHĨ TỪNG BƯỚC[\s\S]*?(?=\{|$)/i,
@@ -964,6 +982,18 @@ Hãy gợi ý hành động:`;
                 /Hành động:[\s\S]*?(?=\{|$)/gi
             ];
 
+            // First, check for explicit COT_REASONING tags (highest priority)
+            const cotReasoningMatch = responseText.match(/\[COT_REASONING\]([\s\S]*?)\[\/COT_REASONING\]/);
+            if (cotReasoningMatch) {
+                const cotContent = cotReasoningMatch[1].trim();
+                console.log('✅ Found COT_REASONING tags with content:', cotContent.substring(0, 200) + '...');
+                return {
+                    type: 'explicit_cot_tags',
+                    reasoning: cotContent,
+                    note: 'COT reasoning found in explicit [COT_REASONING] tags'
+                };
+            }
+            
             const extractedSections = [];
             
             // Try to find any COT reasoning patterns

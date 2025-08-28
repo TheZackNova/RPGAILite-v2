@@ -1056,9 +1056,12 @@ export class EnhancedRAGSystem {
         });
         
         const cotPrompt = `
-🧠 TRƯỚC KHI TẠO JSON RESPONSE - BẮT BUỘC PHẢI SUY NGHĨ TỪNG BƯỚC:
+🧠 TRƯỚC KHI TẠO JSON RESPONSE - BẮT BUỘC PHẢI SUY NGHĨ:
 
-**BƯỚC 1: PHÂN TÍCH TÌNH HUỐNG HIỆN TẠI**
+🎯 **FORMAT BẮT BUỘC**: Bao gồm "cot_reasoning" field trong JSON với suy nghĩ chi tiết!
+
+**BẮNG BUỘC**: Bạn phải bao gồm field "cot_reasoning" chứa:
+**BƯỚC MỘT: PHÂN TÍCH TÌNH HUỐNG HIỆN TẠI**
 Hãy viết ra suy nghĩ của bạn về tình huống hiện tại:
 
 ① **Sự kiện gần đây**: 
@@ -1108,16 +1111,30 @@ Tự hỏi bản thân:
 - Story có thúc đẩy phát triển nhân vật/mối quan hệ không?
 - Choices có đủ đa dạng và thú vị không?
 
-🎯 BẮT BUỘC: HÃY HIỂN THỊ SUY NGHĨ CỦA BẠN CHO TỪNG BƯỚC TRƯỚC KHI TẠO JSON!
+**CUỐI CÙNG**: Tạo JSON response với tất cả suy nghĩ trên trong field "cot_reasoning":
 
-Ví dụ format:
-BƯỚC 1: Tôi thấy tình huống hiện tại là...
-BƯỚC 2: Về cân bằng quyền lực, tôi cần chú ý...
-BƯỚC 3: Kế hoạch của tôi là...
-BƯỚC 4: Để tránh nhàm chán, tôi sẽ...
-BƯỚC 5: Kiểm tra cuối, tôi thấy...
+{
+  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC BỐN: [Sáng tạo]... BƯỚC NĂM: [Kiểm tra cuối]",
+  "story": "...",
+  "choices": [...]
+}
 
-SAU ĐÓ MỚI TẠO JSON RESPONSE.
+🚨 QUAN TRỌNG - ĐỌC KỸ TRƯỚC KHI TRẢ LỜI 🚨
+
+**BẮT BUỘC TUÂN THỦ**: JSON response PHẢI có field "cot_reasoning" với suy nghĩ chi tiết!
+
+**FORMAT CỤ THỂ - BẮT BUỘC THEO ĐÚNG**:
+
+{
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
+  "story": "...",
+  "choices": [...]
+}
+
+❌ SAI: Không có field "cot_reasoning"
+✅ ĐÚNG: Có field "cot_reasoning" với suy nghĩ đầy đủ
+
+**LẦN NÀY PHẢI THEO FORMAT TRÊN - KHÔNG CÓ LỰA CHỌN KHÁC!**
 `;
         
         console.log(`✅ COT: Advanced COT prompt completed`, {
@@ -1746,7 +1763,29 @@ SAU ĐÓ MỚI TẠO JSON RESPONSE.
     ): string {
         let prompt = "";
         
-        // Rule changes first (highest priority)
+        // COT INSTRUCTIONS FIRST - ABSOLUTE PRIORITY
+        prompt += `🚨🚨🚨 CRITICAL INSTRUCTION - READ FIRST 🚨🚨🚨
+
+MANDATORY JSON RESPONSE FORMAT:
+YOU MUST INCLUDE "cot_reasoning" FIELD WITH YOUR THINKING!
+
+Example JSON:
+{
+  "cot_reasoning": "BƯỚC MỘT: Analyzing current situation... BƯỚC HAI: Considering power dynamics... BƯỚC BA: My strategy is...",
+  "story": "...",
+  "choices": [...]
+}
+
+❌ WRONG: Missing cot_reasoning field
+✅ CORRECT: Include cot_reasoning with detailed steps
+
+MANDATORY! THE cot_reasoning FIELD IS REQUIRED!
+
+========================================
+
+`;
+        
+        // Rule changes (second priority)
         if (ruleChangeContext) {
             prompt += ruleChangeContext + "\n";
         }
@@ -1878,6 +1917,28 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
   [SKILL_LEARNED: name="tên kỹ năng" learner="nhân vật" description="mô tả"]
 • KHÔNG BAO GIỜ tạo kỹ năng trùng lặp - luôn dùng SKILL_UPDATE để thay thế
 • Ví dụ: "Thiên Hồ Huyễn Linh Bí Pháp (đang phong ấn)" → "Thiên Hồ Huyễn Linh Bí Pháp (Sơ Giải)" → dùng SKILL_UPDATE`;
+        
+        // Add COT instructions at the end of every prompt
+        prompt += `
+
+🚨 QUAN TRỌNG - BẮT BUỘC TUÂN THỦ 🚨
+
+**BẮT BUỘC**: JSON response PHẢI có field "cot_reasoning"!
+
+**FORMAT CỤ THỂ**:
+{
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
+  "story": "...",
+  "choices": [...]
+}
+
+❌ SAI: Thiếu field "cot_reasoning"
+✅ ĐÚNG: Có field "cot_reasoning" với suy nghĩ đầy đủ
+
+**TUÂN THỦ NGAY BÂY GIỜ - KHÔNG CÓ NGOẠI LỆ!**
+
+🔥 **JSON PHẢI CÓ:** "cot_reasoning" field
+🔥 **KHÔNG ĐƯỢC THIẾU:** "cot_reasoning" field"`;
         
         return prompt;
     }

@@ -1025,6 +1025,13 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                                     delete newEntities[existingPC.name];
                                 }
                                 newEntities[updatedPC.name] = updatedPC;
+                                
+                                // Synchronize PC changes to party
+                                setParty(prevParty => {
+                                    const partyWithoutPC = prevParty.filter(p => p.type !== 'pc');
+                                    return [updatedPC, ...partyWithoutPC];
+                                });
+                                
                                 return newEntities;
                             } else {
                                 // Create new PC if none exists
@@ -1034,6 +1041,13 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                                     ...newAttributes 
                                 };
                                 console.log(`🔗 Created new PC ${newPC.name}: ${newPC.referenceId}`);
+                                
+                                // Synchronize new PC to party
+                                setParty(prevParty => {
+                                    const partyWithoutPC = prevParty.filter(p => p.type !== 'pc');
+                                    return [newPC, ...partyWithoutPC];
+                                });
+                                
                                 return { ...prev, [attributes.name]: newPC };
                             }
                         });
@@ -1580,6 +1594,19 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
             }
         }
        let finalStory = cleanStory.trim();
+        
+        // Extract and log COT reasoning, then remove it from display
+        const cotMatch = finalStory.match(/\[COT_REASONING\]([\s\S]*?)\[\/COT_REASONING\]/);
+        if (cotMatch) {
+            const cotReasoning = cotMatch[1].trim();
+            console.log("🧠 AI Chain of Thought Reasoning:");
+            console.log(cotReasoning);
+            
+            // Remove COT reasoning from story display
+            finalStory = finalStory.replace(/\[COT_REASONING\][\s\S]*?\[\/COT_REASONING\]\s*/, '').trim();
+            console.log("✂️ COT reasoning extracted and hidden from story display");
+        }
+        
 // Chronicle content now stays in original position, no need to append at end
 console.log(" parseStoryAndTags - Final story (chronicle content in original position):", finalStory.length > 0 ? `${finalStory.substring(0, 150)}...` : "[EMPTY]");
         

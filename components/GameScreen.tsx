@@ -185,6 +185,7 @@ export const GameScreen: React.FC<{
     const responseSchema = {
       type: Type.OBJECT,
       properties: {
+        cot_reasoning: { type: Type.STRING, description: "MANDATORY: Chain of Thought reasoning steps in Vietnamese, starting with 'BƯỚC MỘT:', 'BƯỚC HAI:', etc." },
         story: { type: Type.STRING, description: "Phần văn bản tường thuật của câu chuyện, bao gồm các định dạng đặc biệt và các thẻ lệnh ẩn." },
         choices: {
           type: Type.ARRAY,
@@ -192,7 +193,7 @@ export const GameScreen: React.FC<{
           description: "Một mảng gồm 4-6 lựa chọn cho người chơi."
         },
       },
-      required: ['story', 'choices']
+      required: ['cot_reasoning', 'story', 'choices']
     };
 
     // Function to trigger high token usage cooldown
