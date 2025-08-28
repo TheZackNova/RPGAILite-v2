@@ -3,6 +3,20 @@ import type { ChangelogEntry } from '../types.ts';
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.47.0',
+    date: '2025-08-28',
+    changes: [
+      { type: 'feature', text: 'Enhanced Chain of Thought (COT) System - Triển khai hệ thống COT reasoning hoàn chỉnh với JSON field integration. AI giờ bắt buộc phải cung cấp suy nghĩ từng bước trong field "cot_reasoning" thay vì external tags, tương thích với Gemini API application/json constraints.' },
+      { type: 'feature', text: 'COT Research Logging to Save File - Thêm comprehensive logging system lưu trữ AI reasoning patterns vào save file. Mỗi AI response được phân tích và log với turn number, timestamp, user action, COT content, performance metrics, và response quality scores cho research và debugging.' },
+      { type: 'feature', text: 'Advanced COT Step for Choice Generation - Bổ sung BƯỚC 4B: "THIẾT KẾ LỰA CHỌN THEO YÊU CẦU" vào COT prompt, yêu cầu AI phân tích systematic cho choice diversity (7-9 categories), asset utilization, story progression, character consistency, và formatting requirements.' },
+      { type: 'improvement', text: 'Triple-Layer COT Instructions - Implement 3-tier instruction system: (1) Critical priority instructions tại đầu prompt, (2) Advanced COT reasoning section với detailed steps, (3) Final urgency reminders tại cuối prompt với visual cues (🚨🔥) để đảm bảo AI compliance.' },
+      { type: 'improvement', text: 'Real-time COT Monitoring - Console logs hiển thị AI reasoning process real-time với extraction status, content preview, và detection confirmation. Users có thể monitor AI thinking process trong browser console trong khi story panel vẫn clean.' },
+      { type: 'technical', text: 'JSON Schema Integration - Response schema được mở rộng với mandatory "cot_reasoning" field, extractCOTReasoning function ưu tiên JSON field detection, và parseApiResponseHandler tự động extract + log COT content từ structured response.' },
+      { type: 'technical', text: 'Game State COT Integration - cotResearchLog được thêm vào GameState interface, useGameState hook, và save file structure. Bao gồm setCotResearchLog setter, updateCOTResearchLog callback, và automatic save file inclusion với 100-entry limit để prevent bloat.' },
+      { type: 'fix', text: 'PC Location Update in COT - Fixed PC location not updating correctly in Chain of Thought section. Added party synchronization to LORE_PC command processor để ensure location changes via AI tags được reflect trong COT prompt data.' },
+    ],
+  },
+  {
     version: '1.46.1',
     date: '2025-08-26',
     changes: [
