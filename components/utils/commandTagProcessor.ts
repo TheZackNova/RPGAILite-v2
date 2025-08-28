@@ -229,8 +229,8 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
         if (!storyText) return '';
 
         const tagRegex = /\[([A-Z_]+):\s*([^\]]+)\]/g;
-        let cleanStory = storyText;
-        let chronicleTurnContent = ''; // Collect Chronicle turn content to append
+     let cleanStory = storyText;
+// Removed chronicleTurnContent variable since we keep content in original position
 
         const parseAttributes = (attrString: string): { [key: string]: any } => {
             const attributes: { [key: string]: any } = {};
@@ -282,10 +282,11 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                         setGameTime(prevTime => calculateNewTime(prevTime, elapsed));
                         break;
                     case 'CHRONICLE_TURN':
-                        if (attributes.text) {
-                            setChronicle(prev => ({ ...prev, turn: [...prev.turn, attributes.text] }));
-                            // Collect Chronicle turn content to append to story
-                            chronicleTurnContent += (chronicleTurnContent ? '\n\n' : '') + attributes.text;
+    if (attributes.text) {
+        setChronicle(prev => ({ ...prev, turn: [...prev.turn, attributes.text] }));
+        // Keep chronicle content in original position instead of moving to end
+        cleanStory = cleanStory.replace(match[0], attributes.text);
+        console.log(" CHRONICLE_TURN - Keeping content in original position:", attributes.text);
                             // Automatically create enhanced memory from Chronicle turn content
                             setMemories(prev => {
                                 // Process memory text through regex rules
@@ -1578,12 +1579,9 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                 }
             }
         }
-        let finalStory = cleanStory.trim();
-        
-        // Append Chronicle turn content if any
-        if (chronicleTurnContent && applySideEffects) {
-            finalStory += (finalStory ? '\n\n' : '') + chronicleTurnContent;
-        }
+       let finalStory = cleanStory.trim();
+// Chronicle content now stays in original position, no need to append at end
+console.log(" parseStoryAndTags - Final story (chronicle content in original position):", finalStory.length > 0 ? `${finalStory.substring(0, 150)}...` : "[EMPTY]");
         
         if (unprocessedTags.length > 0 && applySideEffects) {
              console.warn("Unprocessed Tags:", unprocessedTags);
