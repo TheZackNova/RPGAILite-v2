@@ -95,5 +95,8 @@ export function sanitizeHTML(html: string): string {
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')
     .replace(/javascript:/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    // Remove reference ID patterns from HTML content
+    .replace(/\[REF_[A-Z_]+_[A-F0-9]+:\s*([^\]]+)\]/g, '$1')
+    .replace(/\[REF_[A-Z_]+_[A-F0-9]+:\s*/g, '');
 }

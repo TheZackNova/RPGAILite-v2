@@ -156,8 +156,15 @@ export const OptimizedInteractiveText: React.FC<{
 
     // Memoize processed text parts
     const processedParts = useMemo((): ProcessedTextPart[] => {
+        // First, clean the text by removing reference ID patterns
+        // This regex matches patterns like [REF_NP_CHA_41E4C75A: Nam Hiền] and [REF_PC_CHA_498FE1FE:+ Lê Minh]
+        let cleanedText = text
+            // Match complete reference tags with content: [REF_XXX: content]
+            .replace(/\[REF_[A-Z_]+_[A-F0-9]+:\s*([^\]]+)\]/g, '$1')
+            // Match incomplete reference tags at start of line: [REF_XXX: (without closing bracket)
+            .replace(/\[REF_[A-Z_]+_[A-F0-9]+:\s*/g, '');
         
-        const parts = text.split(splitRegex);
+        const parts = cleanedText.split(splitRegex);
 
         return parts
             .map((part, index): ProcessedTextPart => {
