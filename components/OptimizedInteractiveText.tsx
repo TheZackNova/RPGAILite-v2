@@ -73,11 +73,9 @@ ThoughtPart.displayName = 'ThoughtPart';
 
 // Memoized dialogue component
 const DialoguePart = memo<{ text: string }>(({ text }) => (
-    <div className="my-2 p-3 bg-slate-800/50 dark:bg-slate-700/30 border-l-4 border-slate-500 dark:border-slate-400 rounded-r-md">
-        <p className="text-slate-200 dark:text-slate-100 italic font-medium leading-relaxed">
-            {text}
-        </p>
-    </div>
+    <span className="text-cyan-400 dark:text-cyan-300 italic font-medium">
+        {text}
+    </span>
 ));
 DialoguePart.displayName = 'DialoguePart';
 
