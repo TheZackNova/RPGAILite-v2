@@ -25,12 +25,12 @@ export const InteractiveText: React.FC<{
 
     const regex = useMemo(() => {
         if (entityNames.length === 0) {
-            return /(\`.*?\`|\*\*⭐.*?\*⭐\*\*)/g;
+            return /(\`.*?\`|\*\*⭐.*?\*⭐\*\*|"[^"]*")/g;
         }
         const escapedNames = entityNames.map(name =>
             name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         );
-        return new RegExp(`(${escapedNames.join('|')}|` + '`.*?`' + `|` + '\\*\\*⭐.*?⭐\\*\\*' + `)`, 'g');
+        return new RegExp(`(${escapedNames.join('|')}|` + '`.*?`' + `|` + '\\*\\*⭐.*?⭐\\*\\*' + `|` + '"[^"]*"' + `)`, 'g');
     }, [entityNames]);
 
     const parts = text.split(regex);
@@ -43,6 +43,7 @@ export const InteractiveText: React.FC<{
                 const isEntity = knownEntities[part];
                 const isThought = part.startsWith('`') && part.endsWith('`');
                 const isAnnouncement = part.startsWith('**⭐') && part.endsWith('⭐**');
+                const isDialogue = part.startsWith('"') && part.endsWith('"') && part.length > 2;
 
                 if (isAnnouncement) {
                      return (
@@ -72,6 +73,16 @@ export const InteractiveText: React.FC<{
                 
                 if (isThought) {
                     return <i key={index} className="text-slate-600 dark:text-slate-400">{part.slice(1, -1)}</i>;
+                }
+
+                if (isDialogue) {
+                    return (
+                        <div key={index} className="my-2 p-3 bg-slate-800/50 dark:bg-slate-700/30 border-l-4 border-slate-500 dark:border-slate-400 rounded-r-md">
+                            <p className="text-slate-200 dark:text-slate-100 italic font-medium leading-relaxed">
+                                {part}
+                            </p>
+                        </div>
+                    );
                 }
 
                 return <span key={index}>{part}</span>;

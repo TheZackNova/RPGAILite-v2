@@ -1120,6 +1120,19 @@ Lên kế hoạch cụ thể cho phản ứng với hành động "${action}":
 - **2-3 diễn biến mới**: ${this.planStoryProgression(gameState)}  
 - **Kết nối với diễn biến trước**: ${this.planContinuity(recentHistory)}
 
+**BƯỚC 3B: KIỂM TRA NPC DECISIVENESS (BẮT BUỘC)**
+⚡ **CRITICAL CHECK - NPC BEHAVIOR VALIDATION**:
+① **Liệt kê TẤT CẢ NPCs sẽ xuất hiện**: Xác định mọi NPC có trong câu chuyện lượt này
+② **Cho mỗi NPC - PLAN IMMEDIATE ACTION**: 
+   - NPC sẽ làm GÌ ngay lượt này (cụ thể, rõ ràng)
+   - NPC sẽ NÓI GÌ (nếu có đối thoại)
+   - NPC sẽ PHẢN ỨNG thế nào với PC
+③ **🚫 ĐẢM BẢO TUYỆT ĐỐI**: 
+   - KHÔNG có NPC nào "suy nghĩ", "cân nhắc", "sẽ quyết định sau"
+   - KHÔNG có NPC nào do dự hay trì hoãn hành động
+   - MỌI NPC phải có hành động/phản ứng hoàn thành trong lượt này
+④ **STORY LENGTH CHECK**: Đảm bảo câu chuyện sẽ đạt 400-500 từ tiếng Việt
+
 **BƯỚC 4: CHỐNG LƯỜI VĂNG & KHUÔN SÁO**
 Tự kiểm tra để tránh nội dung nhàm chán:
 ① **Tránh phản ứng template** - KHÔNG dùng cụm từ sáo mòn
@@ -1141,11 +1154,13 @@ Tự hỏi bản thân:
 - Có tránh được lặp lại pattern cũ không?  
 - Story có thúc đẩy phát triển nhân vật/mối quan hệ không?
 - Choices có đủ đa dạng và thú vị không?
+- **🎯 NPC FINAL VALIDATION**: Tất cả NPCs đã được plan hành động cụ thể chưa?
+- **📏 WORD COUNT FINAL**: Câu chuyện có đủ 400-500 từ không?
 
 **CUỐI CÙNG**: Tạo JSON response với tất cả suy nghĩ trên trong field "cot_reasoning":
 
 {
-  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC BỐN: [Sáng tạo]... BƯỚC 4B: [Thiết kế lựa chọn theo yêu cầu]... BƯỚC NĂM: [Kiểm tra cuối]",
+  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC 3B: [KIỂM TRA NPCs - liệt kê từng NPC và hành động cụ thể của họ]... BƯỚC BỐN: [Sáng tạo]... BƯỚC 4B: [Thiết kế lựa chọn theo yêu cầu]... BƯỚC NĂM: [Kiểm tra cuối + NPC validation + word count]",
   "story": "...",
   "choices": [...]
 }
@@ -1157,7 +1172,7 @@ Tự hỏi bản thân:
 **FORMAT CỤ THỂ - BẮT BUỘC THEO ĐÚNG**:
 
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong, word count sẽ đủ 400-500 từ...",
   "story": "...",
   "choices": [...]
 }
@@ -1974,7 +1989,7 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
 
 **FORMAT CỤ THỂ**:
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối, tôi thấy...",
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong, word count sẽ đủ 400-500 từ...",
   "story": "...",
   "choices": [...]
 }

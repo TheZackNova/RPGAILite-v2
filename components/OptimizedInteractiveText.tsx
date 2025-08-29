@@ -9,6 +9,7 @@ interface ProcessedTextPart {
     isEntity: boolean;
     isThought: boolean;
     isAnnouncement: boolean;
+    isDialogue: boolean;
     entity?: Entity;
     index: number;
 }
@@ -70,6 +71,16 @@ const ThoughtPart = memo<{ text: string }>(({ text }) => (
 ));
 ThoughtPart.displayName = 'ThoughtPart';
 
+// Memoized dialogue component
+const DialoguePart = memo<{ text: string }>(({ text }) => (
+    <div className="my-2 p-3 bg-slate-800/50 dark:bg-slate-700/30 border-l-4 border-slate-500 dark:border-slate-400 rounded-r-md">
+        <p className="text-slate-200 dark:text-slate-100 italic font-medium leading-relaxed">
+            {text}
+        </p>
+    </div>
+));
+DialoguePart.displayName = 'DialoguePart';
+
 // Memoized regular text component
 const RegularTextPart = memo<{ text: string }>(({ text }) => (
     <span>{text}</span>
@@ -97,6 +108,10 @@ const InteractiveTextPart = memo<{
 
     if (part.isThought) {
         return <ThoughtPart text={part.text} />;
+    }
+
+    if (part.isDialogue) {
+        return <DialoguePart text={part.text} />;
     }
 
     return <RegularTextPart text={part.text} />;
@@ -128,7 +143,7 @@ export const OptimizedInteractiveText: React.FC<{
     // Memoize regex for text splitting
     const splitRegex = useMemo(() => {
         if (sortedEntityNames.length === 0) {
-            return /(\`.*?\`|\*\*⭐.*?\*⭐\*\*)/g;
+            return /(\`.*?\`|\*\*⭐.*?\*⭐\*\*|"[^"]*")/g;
         }
         
         const escapedNames = sortedEntityNames.map(name =>
@@ -136,7 +151,7 @@ export const OptimizedInteractiveText: React.FC<{
         );
         
         return new RegExp(
-            `(${escapedNames.join('|')}|` + '`.*?`' + `|` + '\\*\\*⭐.*?⭐\\*\\*' + `)`, 
+            `(${escapedNames.join('|')}|` + '`.*?`' + `|` + '\\*\\*⭐.*?⭐\\*\\*' + `|` + '"[^"]*"' + `)`, 
             'g'
         );
     }, [sortedEntityNames]);
@@ -161,12 +176,14 @@ export const OptimizedInteractiveText: React.FC<{
                 const isEntity = Boolean(knownEntities[part]);
                 const isThought = part.startsWith('`') && part.endsWith('`');
                 const isAnnouncement = part.startsWith('**⭐') && part.endsWith('⭐**');
+                const isDialogue = part.startsWith('"') && part.endsWith('"') && part.length > 2;
 
                 return {
                     text: part,
                     isEntity,
                     isThought,
                     isAnnouncement,
+                    isDialogue,
                     entity: isEntity ? knownEntities[part] : undefined,
                     index
                 };
