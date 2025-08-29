@@ -1816,7 +1816,7 @@ Tự hỏi bản thân:
 --- ĐỊNH DẠNG VĂN BẢN ---
 
 **1. LỜI KỂ:**
-- 250-350 từ, chi tiết và sống động
+- 400-500 từ, chi tiết và sống động
 - Sử dụng \`...\` cho suy nghĩ nội tâm
 - \`**⭐...⭐**\` CHỈ cho thông báo hệ thống quan trọng (KHÔNG dùng cho tên skills, concepts, statuses, hay items)
 - Format \`⭐...⭐\` (không bold) BẮT BUỘC cho nội dung Chronicle Turn
