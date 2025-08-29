@@ -1817,6 +1817,7 @@ Tự hỏi bản thân:
   * Nghỉ ngơi/ngủ: 6-8 giờ
 
 **2. KẾT QUẢ HÀNH ĐỘNG:**
+- Hành động thuộc loại "DI CHUYỂN" hoặc "TUA NHANH THỜI GIAN" BẮT BUỘC phải thay đổi vị trí hoặc thời gian. BẮT BUỘC hoàn thành trong một lượt.
 - KHÔNG đảm bảo thành công
 - Luôn luôn suy luận để quyết định kết quả
 - Hậu quả logic dựa trên kỹ năng và hoàn cảnh, không nên bị động xoay quanh người chơi.
