@@ -1120,6 +1120,24 @@ Lên kế hoạch cụ thể cho phản ứng với hành động "${action}":
 - **2-3 diễn biến mới**: ${this.planStoryProgression(gameState)}  
 - **Kết nối với diễn biến trước**: ${this.planContinuity(recentHistory)}
 
+**BƯỚC 3A: PHÂN TÍCH HÀNH ĐỘNG NGƯỜI CHƠI - BẮT BUỘC**
+🎯 **ACTION COMPLETION ANALYSIS**:
+① **Xác định loại hành động**: "${action}"
+   - Loại: [Di chuyển/Tương tác/Chiến đấu/Đối thoại/Khám phá/Khác]
+   - Độ phức tạp: [Đơn giản/Trung bình/Phức tạp]
+② **KIỂM TRA HOÀN THÀNH TRONG LƯỢT NÀY**:
+   - ✅ **BẮT BUỘC**: Hành động PHẢI được hoàn thành 100% trong story này
+   - 🚫 **NGHIÊM CẤM**: Không để "đang di chuyển...", "sẽ tiếp tục...", "chưa đến nơi..."
+   - 📍 **ĐẶC BIỆT VỚI DI CHUYỂN**: 
+     * Nếu là di chuyển → PC PHẢI đến đích trong lượt này
+     * Chỉ dừng lại nếu có sự kiện/gặp gỡ/trở ngại BẤT NGỜ xảy ra
+     * Mô tả cả quá trình di chuyển + kết quả đến nơi
+③ **KẾ HOẠCH HOÀN THÀNH**:
+   - Điểm bắt đầu: [Mô tả tình huống khởi đầu]
+   - Quá trình thực hiện: [Chi tiết diễn ra như thế nào]  
+   - Kết quả cuối cùng: [Trạng thái sau khi hoàn thành]
+   - Hậu quả/phản ứng: [NPC và môi trường phản ứng gì]
+
 **BƯỚC 3B: KIỂM TRA NPC DECISIVENESS (BẮT BUỘC)**
 ⚡ **CRITICAL CHECK - NPC BEHAVIOR VALIDATION**:
 ① **Liệt kê TẤT CẢ NPCs sẽ xuất hiện**: Xác định mọi NPC có trong câu chuyện lượt này
@@ -1172,7 +1190,7 @@ Tự hỏi bản thân:
 **CUỐI CÙNG**: Tạo JSON response với tất cả suy nghĩ trên trong field "cot_reasoning":
 
 {
-  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC 3B: [KIỂM TRA NPCs - liệt kê từng NPC và hành động cụ thể của họ]... BƯỚC BỐN: [Sáng tạo]... BƯỚC 4B: [Thiết kế lựa chọn theo yêu cầu]... BƯỚC NĂM: [Kiểm tra cuối + NPC validation + WORD COUNT VERIFICATION: Tôi đếm được X từ trong story, cần thêm/bớt Y từ để đạt 400-500 từ]",
+  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC 3A: [PHÂN TÍCH HÀNH ĐỘNG - Loại: X, phải hoàn thành 100% trong lượt này, kế hoạch từ bắt đầu đến kết thúc]... BƯỚC 3B: [KIỂM TRA NPCs - liệt kê từng NPC và hành động cụ thể của họ]... BƯỚC BỐN: [Sáng tạo]... BƯỚC 4B: [Thiết kế lựa chọn theo yêu cầu]... BƯỚC NĂM: [Kiểm tra cuối + NPC validation + WORD COUNT VERIFICATION: Tôi đếm được X từ trong story, cần thêm/bớt Y từ để đạt 400-500 từ]",
   "story": "...",
   "choices": [...]
 }
@@ -1184,7 +1202,7 @@ Tự hỏi bản thân:
 **FORMAT CỤ THỂ - BẮT BUỘC THEO ĐÚNG**:
 
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong, WORD COUNT CHECK: Tôi dự tính story sẽ có khoảng X từ, cần thêm chi tiết [cụ thể gì] để đạt 400-500 từ...",
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3A: Hành động '[action]' là loại [di chuyển/tương tác/khác], độ phức tạp [mức độ]. Tôi PHẢI hoàn thành 100% trong lượt này: bắt đầu từ [X], quá trình [Y], kết quả [Z]... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong, WORD COUNT CHECK: Tôi dự tính story sẽ có khoảng X từ, cần thêm chi tiết [cụ thể gì] để đạt 400-500 từ...",
   "story": "...",
   "choices": [...]
 }
@@ -1804,7 +1822,6 @@ Tự hỏi bản thân:
 - Hậu quả logic dựa trên kỹ năng và hoàn cảnh, không nên bị động xoay quanh người chơi.
 
 **3. CHIẾN ĐẤU:**
-- Theo từng lượt, không giải quyết nhanh
 - Kẻ địch cũng có hành động và trạng thái
 - Mô tả chi tiết và tạo tension
 
@@ -2001,7 +2018,7 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
 
 **FORMAT CỤ THỂ**:
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong, WORD COUNT VERIFICATION: Story hiện tại có X từ, cần [thêm/bớt] [chi tiết cụ thể] để đạt 400-500 từ...",
+  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3A: Hành động là [loại], tôi sẽ hoàn thành từ [điểm A] đến [điểm B] trong lượt này, không để dang dở... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong, WORD COUNT VERIFICATION: Story hiện tại có X từ, cần [thêm/bớt] [chi tiết cụ thể] để đạt 400-500 từ...",
   "story": "...",
   "choices": [...]
 }
