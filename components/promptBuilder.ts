@@ -1835,7 +1835,13 @@ Tự hỏi bản thân:
 
 **1. LỜI KỂ:**
 - 400-500 từ, chi tiết và sống động
-- Sử dụng \`...\` cho suy nghĩ nội tâm
+- **BẮT BUỘC - ĐỊNH DẠNG ĐOẠN THOẠI VÀ SUY NGHĨ:**
+  * Sử dụng **"..."** (dấu ngoặc kép) cho TẤT CẢ đoạn thoại của nhân vật
+  * Sử dụng **\`...\`** (dấu backtick) hoặc **~~...~~** (dấu tilde) cho suy nghĩ nội tâm, tâm trạng, cảm xúc
+  * **VÍ DỤ:**
+    - "Chào bạn, tôi là Tiểu Vũ" (đoạn thoại)
+    - \`Cô ấy thật đẹp, tôi cảm thấy tim mình đập nhanh\` (suy nghĩ nội tâm)
+    - ~~Tôi phải cẩn thận hơn~~ (suy nghĩ nội tâm - định dạng thay thế)
 - \`**⭐...⭐**\` CHỈ cho thông báo hệ thống quan trọng (KHÔNG dùng cho tên skills, concepts, statuses, hay items)
 - Format \`⭐...⭐\` (không bold) BẮT BUỘC cho nội dung Chronicle Turn
 - Tôn trong tính cách các NPC, không phải luôn luôn xoay quanh, chiều lòng người chơi.
