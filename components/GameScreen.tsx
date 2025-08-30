@@ -122,14 +122,14 @@ export const GameScreen: React.FC<{
     const {
         worldData, knownEntities, statuses, quests, gameHistory, memories, party,
         customRules, regexRules, systemInstruction, chronicle, gameTime, turnCount, currentTurnTokens,
-        totalTokens, storyLog, choices, locationDiscoveryOrder, choiceHistory, cotResearchLog, isLoading,
+        totalTokens, storyLog, choices, npcsPresent, locationDiscoveryOrder, choiceHistory, cotResearchLog, isLoading,
         hasGeneratedInitialStory, customAction
     } = gameState;
 
     const {
         setWorldData, setKnownEntities, setStatuses, setQuests, setGameHistory, setMemories,
         setParty, setCustomRules, setRegexRules, setSystemInstruction, setChronicle, setGameTime,
-        setTurnCount, setCurrentTurnTokens, setTotalTokens, setStoryLog, setChoices,
+        setTurnCount, setCurrentTurnTokens, setTotalTokens, setStoryLog, setChoices, setNPCsPresent,
         setLocationDiscoveryOrder, updateChoiceHistory, setCotResearchLog, setIsLoading, setHasGeneratedInitialStory, setCustomAction
     } = gameStateActions;
 
@@ -140,7 +140,7 @@ export const GameScreen: React.FC<{
         isHomeModalOpen, isRestartModalOpen, isMemoryModalOpen, isKnowledgeModalOpen,
         isCustomRulesModalOpen, isMapModalOpen, isPcInfoModalOpen, isPartyModalOpen,
         isQuestLogModalOpen, isSidebarOpen, isChoicesModalOpen, isGameSettingsModalOpen,
-        isInventoryModalOpen, isAdminModalOpen, isEditItemModalOpen, isEditSkillModalOpen, isEditNPCModalOpen, isEditPCModalOpen, isEditLocationModalOpen, isRegexManagerModalOpen, activeEntity, activeStatus, activeQuest, activeEditItem, activeEditSkill, activeEditNPC, activeEditPC, activeEditLocation, showSaveSuccess, showRulesSavedSuccess,
+        isInventoryModalOpen, isNPCPresenceModalOpen, isAdminModalOpen, isEditItemModalOpen, isEditSkillModalOpen, isEditNPCModalOpen, isEditPCModalOpen, isEditLocationModalOpen, isRegexManagerModalOpen, activeEntity, activeStatus, activeQuest, activeEditItem, activeEditSkill, activeEditNPC, activeEditPC, activeEditLocation, showSaveSuccess, showRulesSavedSuccess,
         notification
     } = modalState;
 
@@ -148,7 +148,7 @@ export const GameScreen: React.FC<{
         setIsHomeModalOpen, setIsRestartModalOpen, setIsMemoryModalOpen, setIsKnowledgeModalOpen,
         setIsCustomRulesModalOpen, setIsMapModalOpen, setIsPcInfoModalOpen, setIsPartyModalOpen,
         setIsQuestLogModalOpen, setIsSidebarOpen, setIsChoicesModalOpen, setIsGameSettingsModalOpen,
-        setIsInventoryModalOpen, setIsAdminModalOpen, setIsEditItemModalOpen, setIsEditSkillModalOpen, setIsEditNPCModalOpen, setIsEditPCModalOpen, setIsEditLocationModalOpen, setIsRegexManagerModalOpen, setActiveEntity, setActiveStatus, setActiveQuest, setActiveEditItem, setActiveEditSkill, setActiveEditNPC, setActiveEditPC, setActiveEditLocation, setShowSaveSuccess, setShowRulesSavedSuccess,
+        setIsInventoryModalOpen, setIsNPCPresenceModalOpen, setIsAdminModalOpen, setIsEditItemModalOpen, setIsEditSkillModalOpen, setIsEditNPCModalOpen, setIsEditPCModalOpen, setIsEditLocationModalOpen, setIsRegexManagerModalOpen, setActiveEntity, setActiveStatus, setActiveQuest, setActiveEditItem, setActiveEditSkill, setActiveEditNPC, setActiveEditPC, setActiveEditLocation, setShowSaveSuccess, setShowRulesSavedSuccess,
         setNotification, modalCloseHandlers
     } = modalStateActions;
 
@@ -187,6 +187,23 @@ export const GameScreen: React.FC<{
       properties: {
         cot_reasoning: { type: Type.STRING, description: "MANDATORY: Chain of Thought reasoning steps in Vietnamese, starting with 'BƯỚC MỘT:', 'BƯỚC HAI:', etc." },
         story: { type: Type.STRING, description: "Phần văn bản tường thuật của câu chuyện, bao gồm các định dạng đặc biệt và các thẻ lệnh ẩn." },
+        npcs_present: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING, description: "Tên NPC" },
+              gender: { type: Type.STRING, description: "Giới tính NPC" },
+              age: { type: Type.STRING, description: "Tuổi NPC" },
+              appearance: { type: Type.STRING, description: "Mô tả ngoại hình NPC" },
+              description: { type: Type.STRING, description: "Mô tả về NPC" },
+              relationship: { type: Type.STRING, description: "Quan hệ với player" },
+              inner_thoughts: { type: Type.STRING, description: "Nội tâm NPC về hành động player" }
+            },
+            required: ['name', 'inner_thoughts']
+          },
+          description: "Danh sách các NPC hiện diện trong bối cảnh hiện tại với nội tâm của họ."
+        },
         choices: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
@@ -227,10 +244,10 @@ export const GameScreen: React.FC<{
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
-        setTurnCount, setCurrentTurnTokens, setTotalTokens,
+        setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
-    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown]);
+    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
 
     // Function to get current game state
     const getCurrentGameState = useCallback((): SaveData => {
@@ -1242,6 +1259,7 @@ export const GameScreen: React.FC<{
                         playerInventory={entityComputations.playerInventory}
                         quests={quests}
                         knownEntities={knownEntities}
+                        npcsPresent={npcsPresent}
                         onEntityClick={handleEntityClick}
                         onStatusClick={handleStatusClick}
                         onDeleteStatus={handleDeleteStatus}
@@ -1269,6 +1287,7 @@ export const GameScreen: React.FC<{
             <MobileInputFooter
                 onChoicesClick={() => setIsChoicesModalOpen(true)}
                 onInventoryClick={() => setIsInventoryModalOpen(true)}
+                onNPCPresenceClick={() => setIsNPCPresenceModalOpen(true)}
                 customAction={customAction}
                 setCustomAction={setCustomAction}
                 handleAction={handleAction}
@@ -1297,6 +1316,7 @@ export const GameScreen: React.FC<{
                             isQuestLogModalOpen={isQuestLogModalOpen || false}
                             isChoicesModalOpen={isChoicesModalOpen || false}
                             isInventoryModalOpen={isInventoryModalOpen || false}
+                            isNPCPresenceModalOpen={isNPCPresenceModalOpen || false}
                             isAdminModalOpen={isAdminModalOpen || false}
                             isEditItemModalOpen={isEditItemModalOpen || false}
                             isEditSkillModalOpen={isEditSkillModalOpen || false}
@@ -1353,6 +1373,7 @@ export const GameScreen: React.FC<{
                             customRules={customRules || []}
                             regexRules={regexRules || []}
                             choices={choices || []}
+                            npcsPresent={npcsPresent || []}
                             turnCount={turnCount || 0}
                             locationDiscoveryOrder={locationDiscoveryOrder || []}
                             worldData={worldData || {}}

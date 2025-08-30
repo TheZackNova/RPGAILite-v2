@@ -23,6 +23,7 @@ export interface GameActionHandlersParams {
     setTurnCount: (count: number | ((prev: number) => number)) => void;
     setCurrentTurnTokens: (tokens: number) => void;
     setTotalTokens: (tokens: number | ((prev: number) => number)) => void;
+    setNPCsPresent: (npcs: import('../types').NPCPresent[]) => void;
     
     // Current state values
     gameHistory: GameHistoryEntry[];
@@ -47,7 +48,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
-        setTurnCount, setCurrentTurnTokens, setTotalTokens,
+        setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
     } = params;
@@ -751,6 +752,11 @@ Hãy gợi ý hành động:`;
             storyLogManager.update(prev => [...prev, cleanStory]);
             const newChoices = jsonResponse.choices || [];
             setChoices(newChoices);
+            
+            // Extract and set NPCs present data
+            const npcsPresent = jsonResponse.npcs_present || [];
+            console.log('🤖 NPCs detected from AI response:', npcsPresent.length > 0 ? npcsPresent : 'No NPCs present');
+            setNPCsPresent(npcsPresent);
             
             // Track generated choices in history
             if (newChoices.length > 0) {

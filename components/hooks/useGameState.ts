@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { SaveData, KnownEntities, Status, Quest, GameHistoryEntry, Memory, Entity, CustomRule, Chronicle, RegexRule } from '../types';
+import type { SaveData, KnownEntities, Status, Quest, GameHistoryEntry, Memory, Entity, CustomRule, Chronicle, RegexRule, NPCPresent } from '../types';
 import { MemoryMigration } from '../utils/MemoryMigration';
 
 export interface GameState {
@@ -25,6 +25,7 @@ export interface GameState {
     // Story and choices
     storyLog: string[];
     choices: string[];
+    npcsPresent: NPCPresent[];
     locationDiscoveryOrder: string[];
     choiceHistory: Array<{
         turn: number;
@@ -77,6 +78,7 @@ export interface GameStateActions {
     // Story and choices setters
     setStoryLog: (log: string[] | ((prev: string[]) => string[])) => void;
     setChoices: (choices: string[]) => void;
+    setNPCsPresent: (npcs: NPCPresent[]) => void;
     setLocationDiscoveryOrder: (order: string[] | ((prev: string[]) => string[])) => void;
     updateChoiceHistory: (choices: string[], selectedChoice?: string, context?: string) => void;
     
@@ -124,6 +126,7 @@ export const useGameState = (
     // Story and choices
     const [storyLog, setStoryLog] = useState<string[]>(rehydratedLog);
     const [choices, setChoices] = useState<string[]>(rehydratedChoices);
+    const [npcsPresent, setNPCsPresent] = useState<NPCPresent[]>([]);
     const [locationDiscoveryOrder, setLocationDiscoveryOrder] = useState<string[]>(() => {
         // Priority 1: Use directly saved order if it exists
         if (Array.isArray(initialGameState.locationDiscoveryOrder)) {
@@ -235,6 +238,7 @@ export const useGameState = (
         totalTokens,
         storyLog,
         choices,
+        npcsPresent,
         locationDiscoveryOrder,
         choiceHistory,
         cotResearchLog,
@@ -261,6 +265,7 @@ export const useGameState = (
         setTotalTokens,
         setStoryLog,
         setChoices,
+        setNPCsPresent,
         setLocationDiscoveryOrder,
         updateChoiceHistory,
         setCotResearchLog,

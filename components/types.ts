@@ -171,6 +171,16 @@ export interface Chronicle {
     turn: string[];
 }
 
+export interface NPCPresent {
+    name: string;
+    gender?: string;
+    age?: string;
+    appearance?: string;
+    description?: string;
+    relationship?: string;
+    inner_thoughts: string;
+}
+
 export interface ChangeItem {
   type: 'feature' | 'fix' | 'improvement';
   text: string;

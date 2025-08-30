@@ -3,6 +3,19 @@ import type { ChangelogEntry } from '../types.ts';
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.48.0',
+    date: '2025-08-30',
+    changes: [
+      { type: 'feature', text: 'Mobile NPC Presence Access - Thêm floating button trên mobile UI để truy cập NPC Presence tab. Button màu xanh với icon NPC được đặt phía trên inventory button, mở MobileNPCPresenceModal với slide-up animation và responsive design tối ưu cho điện thoại.' },
+      { type: 'feature', text: 'Mobile NPC Presence Modal - Modal chuyên biệt cho mobile hiển thị tất cả NPCs hiện diện với thông tin chi tiết: tên, tuổi, giới tính, ngoại hình, mối quan hệ. Inner thoughts được hiển thị trong collapsible spoiler format với styling màu tím. NPCs mới có badge "Mới" màu vàng.' },
+      { type: 'feature', text: 'AI-Powered NPC Auto-Removal System - Implement BƯỚC 3B enhancement trong COT system: "LOẠI BỎ NPCs KHÔNG HOẠT ĐỘNG". AI tự động phân tích 3 lượt gần nhất và loại bỏ NPCs không có dialogue/action, giữ lại NPCs quan trọng cho cốt truyện. Transparent logging trong COT reasoning.' },
+      { type: 'improvement', text: 'Enhanced NPC Detection Instructions - COT prompt được cải tiến với QUY TẮC 3 LƯỢT: NPCs bị loại nếu chỉ xuất hiện thụ động (được nhắc đến) mà không tương tác. Có ngoại lệ cho NPCs đang trong conversation hoặc story-critical. AI phải document removed NPCs và lý do trong COT reasoning.' },
+      { type: 'fix', text: 'NPC Inner Thoughts Parsing Fix - Sửa lỗi inner thoughts không hiển thị cho existing NPCs (như Tony Tony Chopper). Thay đổi logic từ "skip duplicates" thành "merge inner thoughts" trong StatusPanel.tsx. Existing entity NPCs giờ nhận inner thoughts từ AI response thay vì hiển thị "Không có suy nghĩ nào được tạo."' },
+      { type: 'technical', text: 'NPC Presence Modal State Management - Thêm isNPCPresenceModalOpen state vào useModalState hook, cập nhật MemoizedModals interface và rendering logic. GameScreen.tsx truyền đầy đủ props cho mobile functionality. Build system verified error-free.' },
+      { type: 'technical', text: 'Cross-Platform NPC Data Consistency - Mobile modal sử dụng inner_thoughts field (underscore format) trực tiếp từ AI response, desktop StatusPanel merge vào innerThoughts field (camelCase). Đảm bảo consistent experience across platforms với proper field mapping.' },
+    ],
+  },
+  {
     version: '1.47.0',
     date: '2025-08-28',
     changes: [

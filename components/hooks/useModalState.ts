@@ -16,6 +16,7 @@ export interface ModalState {
     isChoicesModalOpen: boolean;
     isGameSettingsModalOpen: boolean;
     isInventoryModalOpen: boolean;
+    isNPCPresenceModalOpen: boolean;
     isAdminModalOpen: boolean;
     isEditItemModalOpen: boolean;
     isEditSkillModalOpen: boolean;
@@ -55,6 +56,7 @@ export interface ModalStateActions {
     setIsChoicesModalOpen: (open: boolean) => void;
     setIsGameSettingsModalOpen: (open: boolean) => void;
     setIsInventoryModalOpen: (open: boolean) => void;
+    setIsNPCPresenceModalOpen: (open: boolean) => void;
     setIsAdminModalOpen: (open: boolean) => void;
     setIsEditItemModalOpen: (open: boolean) => void;
     setIsEditSkillModalOpen: (open: boolean) => void;
@@ -117,6 +119,7 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
     const [isGameSettingsModalOpen, setIsGameSettingsModalOpen] = useState(false);
     const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+    const [isNPCPresenceModalOpen, setIsNPCPresenceModalOpen] = useState(false);
     const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
     const [isEditSkillModalOpen, setIsEditSkillModalOpen] = useState(false);
     const [isEditNPCModalOpen, setIsEditNPCModalOpen] = useState(false);
@@ -152,6 +155,7 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
         questLog: () => setIsQuestLogModalOpen(false),
         choices: () => setIsChoicesModalOpen(false),
         inventory: () => setIsInventoryModalOpen(false),
+        npcPresence: () => setIsNPCPresenceModalOpen(false),
         admin: () => setIsAdminModalOpen(false),
         editItem: () => {
             setIsEditItemModalOpen(false);
@@ -190,6 +194,7 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
         isChoicesModalOpen,
         isGameSettingsModalOpen,
         isInventoryModalOpen,
+        isNPCPresenceModalOpen,
         isAdminModalOpen,
         isEditItemModalOpen,
         isEditSkillModalOpen,
@@ -224,6 +229,7 @@ export const useModalState = (): [ModalState, ModalStateActions] => {
         setIsChoicesModalOpen,
         setIsGameSettingsModalOpen,
         setIsInventoryModalOpen,
+        setIsNPCPresenceModalOpen,
         setIsAdminModalOpen,
         setIsEditItemModalOpen,
         setIsEditSkillModalOpen,

@@ -1,7 +1,8 @@
 // components/game/StatusPanel.tsx
-import React, { memo, useState, useMemo } from 'react';
+import React, { memo, useState, useMemo, useContext, useEffect } from 'react';
 import { OptimizedInteractiveText } from '../OptimizedInteractiveText';
-import type { Entity, Status, Quest, KnownEntities } from '../types';
+import { AIContext } from '../../App.tsx';
+import type { Entity, Status, Quest, KnownEntities, GameHistoryEntry, EntityType, NPCPresent } from '../types';
 
 interface StatusPanelProps {
     pcEntity?: Entity;
@@ -10,6 +11,7 @@ interface StatusPanelProps {
     playerInventory: Entity[];
     quests: Quest[];
     knownEntities: KnownEntities;
+    npcsPresent: NPCPresent[];
     onEntityClick: (entityName: string) => void;
     onStatusClick: (status: Status) => void;
     onDeleteStatus: (statusName: string, entityName: string) => void;
@@ -30,12 +32,52 @@ export const StatusPanel: React.FC<StatusPanelProps> = memo(({
     playerInventory,
     quests,
     knownEntities,
+    npcsPresent,
     onEntityClick,
     onStatusClick,
     onDeleteStatus,
     className = ''
 }) => {
-    const [activeTab, setActiveTab] = useState<'character' | 'party' | 'quests'>('character');
+    const [activeTab, setActiveTab] = useState<'character' | 'party' | 'npcs' | 'quests'>('character');
+
+    // Convert NPCPresent data to Entity format for consistency with existing logic
+    const presentNPCs = useMemo(() => {
+        // Get entity NPCs first
+        const pcLocation = pcEntity?.location;
+        const entityNPCs = Object.values(knownEntities).filter(entity => 
+            entity.type === 'npc' && 
+            entity.name !== pcEntity?.name &&
+            (entity.location === pcLocation || !entity.location || entity.location === 'present')
+        );
+
+        // Convert AI-generated NPCs to Entity format and combine with existing entities
+        const aiNPCs = npcsPresent.map(npc => ({
+            name: npc.name,
+            type: 'npc' as EntityType,
+            gender: npc.gender && npc.gender !== 'Không rõ' ? npc.gender : undefined,
+            age: npc.age && npc.age !== 'Không rõ' ? npc.age : undefined,
+            appearance: npc.appearance || undefined,
+            description: npc.description || undefined,
+            relationship: npc.relationship && npc.relationship !== 'unknown' ? npc.relationship : undefined,
+            location: 'present',
+            innerThoughts: npc.inner_thoughts // Add inner thoughts to entity
+        }));
+
+        // Combine entity NPCs with AI-detected NPCs, merging inner thoughts for existing NPCs
+        const allNPCs = [...entityNPCs];
+        aiNPCs.forEach(aiNPC => {
+            const existingNPC = allNPCs.find(existing => existing.name.toLowerCase() === aiNPC.name.toLowerCase());
+            if (existingNPC) {
+                // Merge inner thoughts into existing entity NPC
+                existingNPC.innerThoughts = aiNPC.innerThoughts;
+            } else {
+                // Add new AI NPC if it doesn't exist
+                allNPCs.push(aiNPC);
+            }
+        });
+
+        return allNPCs;
+    }, [knownEntities, pcEntity?.name, pcEntity?.location, npcsPresent]);
 
     // Calculate tabs data
     const tabs: TabProps[] = useMemo(() => [
@@ -52,12 +94,18 @@ export const StatusPanel: React.FC<StatusPanelProps> = memo(({
             count: displayParty.length
         },
         {
+            id: 'npcs',
+            label: 'NPC hiện diện',
+            icon: '👥',
+            count: presentNPCs.length
+        },
+        {
             id: 'quests',
             label: 'Nhiệm vụ',
             icon: '📋',
             count: quests.length
         }
-    ], [pcStatuses.length, playerInventory.length, displayParty.length, quests.length]);
+    ], [pcStatuses.length, playerInventory.length, displayParty.length, presentNPCs.length, quests.length]);
 
     // Helper function to get fame color
     const getFameColor = (fame: string): string => {
@@ -363,6 +411,137 @@ export const StatusPanel: React.FC<StatusPanelProps> = memo(({
         );
     };
 
+    // No longer need AI generation logic - inner thoughts come from the main AI response
+
+    // Render NPCs content
+    const renderNPCs = () => {
+        if (presentNPCs.length === 0) {
+            return (
+                <div className="text-center py-8">
+                    <div className="text-4xl mb-4">👥</div>
+                    <p className="text-white/60">Không có NPC nào hiện diện</p>
+                    <p className="text-xs text-white/40 mt-2">
+                        NPCs sẽ được tự động tạo từ AI khi có trong story
+                    </p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-4">
+                {/* Debug info for development */}
+                {process.env.NODE_ENV === 'development' && (
+                    <div className="text-xs text-white/50 p-2 bg-white/5 rounded border border-white/10">
+                        <p>🔍 NPC Integration Debug:</p>
+                        <p>- Entity NPCs: {Object.values(knownEntities).filter(e => e.type === 'npc').length}</p>
+                        <p>- AI Generated NPCs: {npcsPresent.length}</p>
+                        <p>- Total Present: {presentNPCs.length}</p>
+                    </div>
+                )}
+                
+                {presentNPCs.map((npc, index) => (
+                    <div key={index} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
+                        {/* Spoiler Header */}
+                        <details className="group">
+                            <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/5 transition-colors rounded-t-xl">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-purple-500/30 to-pink-500/30 rounded-lg flex items-center justify-center text-xl">
+                                        👤
+                                    </div>
+                                    <div>
+                                        <h4 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onEntityClick(npc.name);
+                                            }}>
+                                            {npc.name}
+                                        </h4>
+                                        <p className="text-sm text-white/60 flex items-center gap-1">
+                                            NPC
+                                            {/* Show detection source indicator */}
+                                            {npc.innerThoughts && !knownEntities[npc.name] && (
+                                                <span className="text-xs bg-blue-500/30 text-blue-200 px-1 py-0.5 rounded" title="AI tạo từ story">
+                                                    🤖
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="text-white/60 group-open:rotate-180 transition-transform duration-200">
+                                    ▼
+                                </div>
+                            </summary>
+                            
+                            {/* Spoiler Content */}
+                            <div className="p-4 pt-0 border-t border-white/10">
+                                <div className="space-y-3 text-sm">
+                                    {/* Basic Info */}
+                                    {npc.appearance && (
+                                        <div>
+                                            <strong className="text-white/90">Dung mạo:</strong>
+                                            <p className="mt-1 text-white/80 pl-2">{npc.appearance}</p>
+                                        </div>
+                                    )}
+                                    
+                                    {npc.age && (
+                                        <p>
+                                            <strong className="text-white/90">Tuổi:</strong> 
+                                            <span className="text-white/80 ml-2">{npc.age}</span>
+                                        </p>
+                                    )}
+                                    
+                                    {npc.gender && (
+                                        <p>
+                                            <strong className="text-white/90">Giới tính:</strong> 
+                                            <span className="text-white/80 ml-2">{npc.gender}</span>
+                                        </p>
+                                    )}
+                                    
+                                    {/* Relationship */}
+                                    <p>
+                                        <strong className="text-white/90">Quan hệ:</strong> 
+                                        <span className="text-white/80 ml-2">
+                                            {npc.relationship || 'Chưa rõ'}
+                                        </span>
+                                    </p>
+                                    
+                                    {/* Inner thoughts */}
+                                    <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                                        <strong className="text-white/90">Nội tâm:</strong>
+                                        <p className="mt-1 text-purple-300 italic pl-2">
+                                            "{npc.innerThoughts || 'Không có suy nghĩ nào được tạo.'}"
+                                        </p>
+                                    </div>
+                                    
+                                    {/* Additional info if available */}
+                                    {npc.description && (
+                                        <div>
+                                            <strong className="text-white/90">Mô tả:</strong>
+                                            <div className="mt-1 pl-2">
+                                                <OptimizedInteractiveText
+                                                    text={npc.description}
+                                                    onEntityClick={onEntityClick}
+                                                    knownEntities={knownEntities}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {npc.realm && (
+                                        <p>
+                                            <strong className="text-white/90">Thực lực:</strong>
+                                            <span className="text-cyan-300 font-semibold ml-2">{npc.realm}</span>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     // Render quests content
     const renderQuests = () => {
         if (quests.length === 0) {
@@ -472,6 +651,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = memo(({
                 <div className="h-full overflow-y-auto p-4">
                     {activeTab === 'character' && renderCharacterSheet()}
                     {activeTab === 'party' && renderParty()}
+                    {activeTab === 'npcs' && renderNPCs()}
                     {activeTab === 'quests' && renderQuests()}
                 </div>
             </div>

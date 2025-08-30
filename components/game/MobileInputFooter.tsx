@@ -7,6 +7,7 @@ import { SparklesIcon } from '../Icons.tsx';
 interface MobileInputFooterProps {
     onChoicesClick: () => void;
     onInventoryClick: () => void;
+    onNPCPresenceClick: () => void;
     customAction: string;
     setCustomAction: (action: string) => void;
     handleAction: (action: string) => void;
@@ -20,7 +21,7 @@ interface MobileInputFooterProps {
 }
 
 export const MobileInputFooter: React.FC<MobileInputFooterProps> = ({
-    onChoicesClick, onInventoryClick, customAction, setCustomAction, handleAction, debouncedHandleAction, handleSuggestAction, isLoading, isAiReady, isCustomActionLocked, isHighTokenCooldown = false, cooldownTimeLeft = 0
+    onChoicesClick, onInventoryClick, onNPCPresenceClick, customAction, setCustomAction, handleAction, debouncedHandleAction, handleSuggestAction, isLoading, isAiReady, isCustomActionLocked, isHighTokenCooldown = false, cooldownTimeLeft = 0
 }) => {
     // Local state for input to prevent lag
     const [localCustomAction, setLocalCustomAction] = useState(customAction);
@@ -100,6 +101,15 @@ export const MobileInputFooter: React.FC<MobileInputFooterProps> = ({
                 aria-label="Lựa chọn hành động"
             >
                <GameIcons.SwordIcon className="w-6 h-6"/>
+            </button>
+            
+            {/* NPC Presence Button */}
+            <button 
+                onClick={onNPCPresenceClick}
+                className="md:hidden fixed bottom-52 right-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-full shadow-lg z-40"
+                aria-label="NPC hiện tại"
+            >
+               <GameIcons.NpcIcon className="w-6 h-6"/>
             </button>
             
             {/* Inventory Button */}

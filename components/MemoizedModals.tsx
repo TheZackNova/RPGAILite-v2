@@ -9,6 +9,7 @@ import { KnowledgeBaseModal } from './KnowledgeBaseModal.tsx';
 import { EnhancedCustomRulesModal } from './EnhancedCustomRulesModal.tsx';
 import { MapModal } from './MapModal.tsx';
 import { MobileChoicesModal } from './game/MobileChoicesModal.tsx';
+import { MobileNPCPresenceModal } from './game/MobileNPCPresenceModal.tsx';
 import { PartyMemberTab } from './PartyMemberTab.tsx';
 import { QuestLog } from './QuestLog.tsx';
 import { InventoryModal } from './InventoryModal.tsx';
@@ -47,6 +48,7 @@ interface MemoizedModalsProps {
     isQuestLogModalOpen: boolean;
     isChoicesModalOpen: boolean;
     isInventoryModalOpen: boolean;
+    isNPCPresenceModalOpen: boolean;
     isAdminModalOpen: boolean;
     isEditItemModalOpen: boolean;
     isEditSkillModalOpen: boolean;
@@ -130,6 +132,7 @@ interface MemoizedModalsProps {
     customRules: CustomRule[];
     regexRules?: RegexRule[];
     choices: string[];
+    npcsPresent: any[];
     turnCount: number;
     locationDiscoveryOrder: string[];
     worldData: any; // World configuration data including realm system
@@ -485,6 +488,7 @@ const MemoizedModalsComponent = ({
     isQuestLogModalOpen,
     isChoicesModalOpen,
     isInventoryModalOpen,
+    isNPCPresenceModalOpen,
     isAdminModalOpen,
     isEditItemModalOpen,
     isEditSkillModalOpen,
@@ -541,6 +545,7 @@ const MemoizedModalsComponent = ({
     customRules,
     regexRules,
     choices,
+    npcsPresent,
     turnCount,
     locationDiscoveryOrder,
     worldData,
@@ -706,6 +711,14 @@ const MemoizedModalsComponent = ({
                 choices={choices}
                 onAction={handleAction}
                 isHighTokenCooldown={isHighTokenCooldown}
+            />
+
+            {/* Mobile NPC Presence Modal */}
+            <MobileNPCPresenceModal 
+                isOpen={isNPCPresenceModalOpen}
+                onClose={modalCloseHandlers.npcPresence}
+                npcsPresent={npcsPresent}
+                knownEntities={knownEntities}
             />
 
             {/* Inventory Modal */}
