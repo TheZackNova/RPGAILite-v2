@@ -284,14 +284,12 @@ export class RuleActivationEngine {
             try {
                 // Check activation limits
                 if (!this.checkActivationLimits(rule, currentTurn)) {
-                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: activation limit reached`);
                     skipped.push(rule);
                     continue;
                 }
 
                 // Check probability
                 if (!this.checkProbability(rule)) {
-                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: probability check failed`);
                     skipped.push(rule);
                     continue;
                 }
@@ -299,7 +297,6 @@ export class RuleActivationEngine {
                 // Collect text to scan
                 const scanText = this.collectScanText(rule, context);
                 if (!scanText) {
-                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: no text to scan`);
                     continue;
                 }
 
@@ -327,7 +324,6 @@ export class RuleActivationEngine {
                 );
 
                 if (!logicResult.activated) {
-                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: ${logicResult.reason} | Primary: [${primaryMatch.matchedKeywords.join(', ')}] | Secondary: [${secondaryMatch.matchedKeywords.join(', ')}]`);
                     skipped.push(rule);
                     continue;
                 }
@@ -337,7 +333,6 @@ export class RuleActivationEngine {
                 
                 // Check token budget
                 if (totalTokens + tokenCost > tokenBudget) {
-                    console.log(`⏭️ Rule "${rule.title || rule.id}" skipped: would exceed token budget`);
                     skipped.push(rule);
                     continue;
                 }
@@ -363,10 +358,7 @@ export class RuleActivationEngine {
                 rule.lastActivated = currentTurn;
                 rule.activationCount = (rule.activationCount || 0) + 1;
 
-                console.log(`✅ Rule "${rule.title || rule.id}" activated: ${logicResult.reason}`);
-
             } catch (error) {
-                console.error(`❌ Error processing rule "${rule.title || rule.id}":`, error);
                 skipped.push(rule);
             }
         }
@@ -374,26 +366,6 @@ export class RuleActivationEngine {
         // Sort activated rules by priority (higher first)
         activated.sort((a, b) => b.priority - a.priority);
 
-        // Enhanced debug summary
-        const totalRules = rules.length;
-        const inactiveCount = inactiveRules.length;
-        const processedRules = activeRules.length;
-        const nonActivatedRules = processedRules - activated.length;
-        
-        console.log(`🎯 Activation Summary:
-        📊 Total Rules: ${totalRules}
-        ❌ Inactive Rules: ${inactiveCount}
-        🔄 Processed Rules: ${processedRules}
-        ✅ Activated Rules: ${activated.length}
-        ⏭️ Skipped Rules: ${nonActivatedRules}
-        💰 Token Usage: ${totalTokens}/${tokenBudget} (${((totalTokens/tokenBudget)*100).toFixed(1)}%)`);
-        
-        if (activated.length > 0) {
-            console.log(`🔥 Activated: ${activated.map(a => a.rule.title || a.rule.id).join(', ')}`);
-        }
-        if (skipped.length > 0) {
-            console.log(`⏭️ Skipped: ${skipped.map(r => r.title || r.id).join(', ')}`);
-        }
 
         return {
             activatedRules: activated,

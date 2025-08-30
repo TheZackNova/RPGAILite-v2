@@ -401,7 +401,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = memo(({
                         )}
 
                         {quest.objectives && quest.objectives.length > 0 && (
-                            <div>
+                            <div className="mb-3">
                                 <p className="text-xs text-white/60 mb-2">Mục tiêu:</p>
                                 <ul className="space-y-1">
                                     {quest.objectives.map((objective, objIndex) => (
@@ -415,6 +415,21 @@ export const StatusPanel: React.FC<StatusPanelProps> = memo(({
                                         </li>
                                     ))}
                                 </ul>
+                            </div>
+                        )}
+
+                        {quest.reward && (
+                            <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-3">
+                                <p className="text-xs text-yellow-400 mb-1 flex items-center gap-1">
+                                    🏆 Phần thưởng:
+                                </p>
+                                <div className="text-sm text-yellow-200">
+                                    <OptimizedInteractiveText
+                                        text={quest.reward}
+                                        onEntityClick={onEntityClick}
+                                        knownEntities={knownEntities}
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
