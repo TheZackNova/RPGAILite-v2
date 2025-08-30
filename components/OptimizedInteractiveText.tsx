@@ -168,6 +168,8 @@ export const OptimizedInteractiveText: React.FC<{
         let cleanedText = text
             // Match complete reference tags with content: [REF_XXX: content]
             .replace(/\[REF_[A-Z_]+_[A-F0-9]+:\s*([^\]]+)\]/g, '$1')
+            // Match standalone reference tags without content: [REF_XXX]
+            .replace(/\[REF_[A-Z_]+_[A-F0-9]+\]/g, '')
             // Match incomplete reference tags at start of line: [REF_XXX: (without closing bracket)
             .replace(/\[REF_[A-Z_]+_[A-F0-9]+:\s*/g, '');
         

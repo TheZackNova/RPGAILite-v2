@@ -176,4 +176,40 @@ describe('OptimizedInteractiveText - Dialogue Styling', () => {
     expect(backtickThought).toHaveClass('text-slate-600');
     expect(tildeThought).toHaveClass('text-slate-600');
   });
+
+  test('should clean standalone reference IDs without content', () => {
+    const textWithRefs = 'Tiểu Vũ [REF_NP_CHA_133D5F1E] vẫn đứng đó, cơ thể khẽ run rẩy.';
+    
+    render(
+      <OptimizedInteractiveText 
+        text={textWithRefs}
+        onEntityClick={mockOnEntityClick}
+        knownEntities={mockKnownEntities}
+      />
+    );
+
+    // Should not find the reference ID in the rendered text
+    expect(screen.queryByText(/REF_NP_CHA_133D5F1E/)).not.toBeInTheDocument();
+    
+    // Should find the cleaned text without reference IDs
+    expect(screen.getByText(/Tiểu Vũ vẫn đứng đó, cơ thể khẽ run rẩy/)).toBeInTheDocument();
+  });
+
+  test('should clean reference IDs with content and keep the content', () => {
+    const textWithContentRefs = 'Gặp [REF_NP_CHA_123ABC: Tiểu Vũ] tại trường học.';
+    
+    render(
+      <OptimizedInteractiveText 
+        text={textWithContentRefs}
+        onEntityClick={mockOnEntityClick}
+        knownEntities={mockKnownEntities}
+      />
+    );
+
+    // Should not find the reference ID in the rendered text
+    expect(screen.queryByText(/REF_NP_CHA_123ABC/)).not.toBeInTheDocument();
+    
+    // Should find the content without the reference wrapper
+    expect(screen.getByText(/Gặp Tiểu Vũ tại trường học/)).toBeInTheDocument();
+  });
 });
