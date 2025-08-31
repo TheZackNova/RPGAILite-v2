@@ -222,6 +222,9 @@ export interface GameActionHandlersParams {
     topK: number;
     topP: number;
     
+    // Game Settings
+    enableCOT: boolean;
+    
     // State setters
     setIsLoading: (loading: boolean) => void;
     setChoices: (choices: string[]) => void;
@@ -255,7 +258,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
     const {
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
-        temperature, topK, topP,
+        temperature, topK, topP, enableCOT,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
@@ -466,7 +469,7 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
 
         let nsfwInstructionPart = isNsfwRequest && currentGameState.worldData.allowNsfw ? `\nLƯU Ý ĐẶC BIỆT: ...` : '';
         
-        const userPrompt = buildEnhancedRagPrompt(originalAction, currentGameState, ruleChangeContext, nsfwInstructionPart);
+        const userPrompt = buildEnhancedRagPrompt(originalAction, currentGameState, ruleChangeContext, nsfwInstructionPart, enableCOT);
         
         // DEBUG: Enhanced prompt analysis for COT tracking
         console.log(`🔍 [Turn ${currentGameState.turnCount}] Enhanced Prompt Debug:`, {

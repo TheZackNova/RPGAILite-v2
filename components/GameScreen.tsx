@@ -243,12 +243,12 @@ export const GameScreen: React.FC<{
     const gameActionHandlers = useMemo(() => createGameActionHandlers({
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
-        temperature, topK, topP,
+        temperature, topK, topP, enableCOT: gameSettings.enableCOT,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
-    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, temperature, topK, topP, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
+    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, temperature, topK, topP, gameSettings.enableCOT, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
 
     // Function to get current game state
     const getCurrentGameState = useCallback((): SaveData => {

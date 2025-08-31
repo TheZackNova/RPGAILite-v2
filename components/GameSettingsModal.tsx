@@ -8,6 +8,7 @@ export interface GameSettings {
     historyAutoCompress: boolean;
     maxActiveHistoryEntries: number;
     themeColor: string;
+    enableCOT: boolean;
 }
 
 const DEFAULT_SETTINGS: GameSettings = {
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: GameSettings = {
     historyAutoCompress: true,
     maxActiveHistoryEntries: 100,
     themeColor: 'purple',
+    enableCOT: true,
 };
 
 const FONT_FAMILIES = [
@@ -317,6 +319,30 @@ export const GameSettingsModal: React.FC<{
                                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
+
+                        {/* COT (Chain of Thought) Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">🧠</span>
+                                    <span className="font-semibold text-slate-800 dark:text-gray-100">
+                                        Chain of Thought (COT)
+                                    </span>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                    Bật/tắt quá trình suy nghĩ chi tiết của AI trong phản hồi. Tắt để có phản hồi nhanh hơn nhưng ít chi tiết hơn
+                                </p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={localSettings.enableCOT ?? true}
+                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, enableCOT: e.target.checked }))}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Max Active History Entries Slider */}
@@ -370,6 +396,7 @@ export const GameSettingsModal: React.FC<{
                         <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                             <div>Font: {localSettings.fontFamily} - {localSettings.fontSize}px</div>
                             <div>Màu chủ đề: {THEME_COLORS.find(t => t.id === localSettings.themeColor)?.name || 'Tím Hoàng Gia'}</div>
+                            <div>Chain of Thought: {localSettings.enableCOT ? '✅ Bật' : '❌ Tắt'}</div>
                             <div>Dọn dẹp bộ nhớ: {localSettings.memoryAutoClean ? '✅ Bật' : '❌ Tắt'}</div>
                             <div>Nén lịch sử: {localSettings.historyAutoCompress ? '✅ Bật' : '❌ Tắt'}</div>
                             <div>Lịch sử tối đa: {localSettings.maxActiveHistoryEntries ?? 100} mục</div>

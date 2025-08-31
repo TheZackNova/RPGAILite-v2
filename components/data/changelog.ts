@@ -6,6 +6,7 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
     version: '1.49.0',
     date: '2025-08-31',
     changes: [
+      { type: 'feature', text: 'Chain of Thought (COT) Toggle - Thêm tùy chọn bật/tắt Chain of Thought trong Game Settings. Khi tắt, AI sẽ phản hồi nhanh hơn mà không cần qua trình suy nghĩ chi tiết. Cải thiện performance cho user không muốn xem quá trình reasoning của AI.' },
       { type: 'feature', text: 'Enhanced NPC Data Generation & Validation - Thêm comprehensive NPC enhancement system với intelligent field filling: relationship field auto-convert sang tiếng Việt, age inference từ context (Thanh niên/Trung niên/Cao tuổi), detailed appearance generation từ story context, và fallback descriptions. NPC hiện có đầy đủ thông tin trong EntityInfoModal và StatusPanel.' },
       { type: 'improvement', text: 'AI Prompt Enhancement for NPCs - Cải thiện prompt template với "BẮT BUỘC" requirements cho tất cả NPC fields, minimum word counts cho appearance/description (10-15 từ), và explicit Vietnamese relationship values. AI giờ được hướng dẫn chi tiết hơn để generate complete NPC data.' },
       { type: 'feature', text: 'Enhanced Custom Rules Integration - Cải tiến logic custom rules trong generateInitialStory để AI sử dụng cả rules có "Active" VÀ "Always Active" được check (thay vì OR logic). Custom rules giờ tác động mạnh hơn vào câu chuyện khởi đầu với logic AND requirement.' },

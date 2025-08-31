@@ -50,13 +50,65 @@ export class EnhancedRAGSystem {
     private initializeSystem() {
         // Initialize any preprocessing needed
     }
+    
+    /**
+     * Conditionally build COT template strings based on user setting
+     */
+    private buildCOTTemplate(enableCOT: boolean, section: 'thinking-steps' | 'json-example' | 'final-reminder'): string {
+        if (!enableCOT) {
+            switch (section) {
+                case 'thinking-steps':
+                    return '';
+                case 'json-example':
+                    return `{
+  "story": "...",
+  "npcs_present": [...],
+  "choices": [...]
+}`;
+                case 'final-reminder':
+                    return '';
+            }
+        }
+        
+        // Default COT templates when enabled
+        switch (section) {
+            case 'thinking-steps':
+                return `**BẮNG BUỘC**: Bạn phải bao gồm field "cot_reasoning" chứa:
+**BƯỚC MỘT: PHÂN TÍCH TÌNH HUỐNG HIỆN TẠI**
+Hãy viết ra suy nghĩ của bạn về tình huống hiện tại:
+
+**BƯỚC HAI: CÂN BẰNG QUYỀN LỰC & HIỆU ỨNG HÀNH ĐỘNG**
+Phân tích cân bằng quyền lực:
+
+**BƯỚC BA: KẾ HOẠCH DIỄN BIẾN**
+Lập kế hoạch cho diễn biến câu chuyện:
+
+**BƯỚC BỐN: SÁNG TẠO & TRÁNH LẶP LẠI**
+Làm thế nào để tránh nhàm chán:`;
+
+            case 'json-example':
+                return `{
+  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]...",
+  "story": "...",
+  "npcs_present": [...],
+  "choices": [...]
+}`;
+
+            case 'final-reminder':
+                return `❌ SAI: Không có field "cot_reasoning"
+✅ ĐÚNG: Có field "cot_reasoning" với suy nghĩ đầy đủ`;
+        }
+        
+        return '';
+    }
 
     // Main entry point - builds the enhanced RAG prompt
     public buildEnhancedPrompt(
         action: string,
         gameState: SaveData,
         ruleChangeContext: string = '',
-        playerNsfwRequest: string = ''
+        playerNsfwRequest: string = '',
+        enableCOT: boolean = true
     ): string {
         const startTime = performance.now();
         
@@ -150,7 +202,8 @@ export class EnhancedRAGSystem {
                 gameState.worldData,
                 intelligentContext,
                 compactContext,
-                gameState
+                gameState,
+                enableCOT
             );
             
             const endTime = performance.now();
@@ -1899,12 +1952,14 @@ Tự hỏi bản thân:
         worldData: any,
         intelligentContext?: any,
         compactContext?: CompactRAGContext | null,
-        gameState?: SaveData
+        gameState?: SaveData,
+        enableCOT: boolean = true
     ): string {
         let prompt = "";
         
-        // COT INSTRUCTIONS FIRST - ABSOLUTE PRIORITY
-        prompt += `🚨🚨🚨 CRITICAL INSTRUCTION - READ FIRST 🚨🚨🚨
+        // COT INSTRUCTIONS (CONDITIONAL BASED ON USER SETTING)
+        if (enableCOT) {
+            prompt += `🚨🚨🚨 CRITICAL INSTRUCTION - READ FIRST 🚨🚨🚨
 
 MANDATORY JSON RESPONSE FORMAT:
 YOU MUST INCLUDE "cot_reasoning" FIELD WITH YOUR THINKING!
@@ -1924,6 +1979,25 @@ MANDATORY! THE cot_reasoning FIELD IS REQUIRED!
 ========================================
 
 `;
+        } else {
+            prompt += `🚨🚨🚨 RESPONSE FORMAT - READ FIRST 🚨🚨🚨
+
+JSON RESPONSE FORMAT (COT DISABLED):
+Respond with streamlined JSON format - no "cot_reasoning" field needed.
+
+Example JSON:
+{
+  "story": "...",
+  "npcs_present": [...],
+  "choices": [...]
+}
+
+✅ CORRECT: Direct story response without detailed reasoning steps
+
+========================================
+
+`;
+        }
         
         // Rule changes (second priority)
         if (ruleChangeContext) {
@@ -1984,22 +2058,26 @@ MANDATORY! THE cot_reasoning FIELD IS REQUIRED!
             prompt += `\n${choiceContext}`;
         }
         
-        // Add advanced Chain of Thought reasoning - MANDATORY
-        const cotReasoning = this.buildAdvancedCOTPrompt(action, gameState);
-        if (cotReasoning) {
-            console.log(`🧠 [Turn ${gameState?.turnCount || 0}] COT Prompt Built:`, {
-                cotLength: cotReasoning.length,
-                cotTokens: this.estimateTokens(cotReasoning),
-                hasRecentEvents: cotReasoning.includes('Sự kiện gần đây'),
-                hasCharacterAnalysis: cotReasoning.includes('NHÂN VẬT CHÍNH'),
-                hasAntiOppression: cotReasoning.includes('CHỐNG ÁP BỨC'),
-                action: action.substring(0, 50) + (action.length > 50 ? '...' : '')
-            });
-            // PRIORITY: Place COT at the very end for maximum visibility
-            prompt += `\n\n` + "=".repeat(80) + `\n`;
-            prompt += `🚨 QUAN TRỌNG: BẮT BUỘC PHẢI THỰC HIỆN COT REASONING TRƯỚC KHI TẠO JSON!\n`;
-            prompt += "=".repeat(80) + `\n`;
-            prompt += cotReasoning;
+        // Add advanced Chain of Thought reasoning (CONDITIONAL)
+        if (enableCOT) {
+            const cotReasoning = this.buildAdvancedCOTPrompt(action, gameState);
+            if (cotReasoning) {
+                console.log(`🧠 [Turn ${gameState?.turnCount || 0}] COT Prompt Built:`, {
+                    cotLength: cotReasoning.length,
+                    cotTokens: this.estimateTokens(cotReasoning),
+                    hasRecentEvents: cotReasoning.includes('Sự kiện gần đây'),
+                    hasCharacterAnalysis: cotReasoning.includes('NHÂN VẬT CHÍNH'),
+                    hasAntiOppression: cotReasoning.includes('CHỐNG ÁP BỨC'),
+                    action: action.substring(0, 50) + (action.length > 50 ? '...' : '')
+                });
+                // PRIORITY: Place COT at the very end for maximum visibility
+                prompt += `\n\n` + "=".repeat(80) + `\n`;
+                prompt += `🚨 QUAN TRỌNG: BẮT BUỘC PHẢI THỰC HIỆN COT REASONING TRƯỚC KHI TẠO JSON!\n`;
+                prompt += "=".repeat(80) + `\n`;
+                prompt += cotReasoning;
+            }
+        } else {
+            console.log(`🚫 [Turn ${gameState?.turnCount || 0}] COT Disabled - Skipping advanced COT prompt`);
         }
         
         // NSFW context if applicable
@@ -2363,12 +2441,14 @@ export const buildEnhancedRagPrompt = (
     action: string,
     gameState: SaveData,
     ruleChangeContext = '',
-    playerNsfwRequest = ''
+    playerNsfwRequest = '',
+    enableCOT = true
 ): string => {
     return enhancedRAG.buildEnhancedPrompt(
         action,
         gameState,
         ruleChangeContext,
-        playerNsfwRequest
+        playerNsfwRequest,
+        enableCOT
     );
 };
