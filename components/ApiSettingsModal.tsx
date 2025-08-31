@@ -51,9 +51,11 @@ export const ApiSettingsModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4" onClick={onClose}>
-            <div className="w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-lg max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <h2 className="text-3xl font-bold mb-4 text-center text-purple-600 dark:text-purple-300" style={{ textShadow: '0 0 8px rgba(192, 132, 252, 0.5)' }}>Thiết Lập Nguồn AI</h2>
-                <div className="bg-white/90 dark:bg-[#252945]/90 backdrop-blur-sm border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl p-6 space-y-6">
+                <div className="bg-white/90 dark:bg-[#252945]/90 backdrop-blur-sm border border-slate-300 dark:border-slate-700 rounded-lg shadow-xl flex flex-col min-h-0">
+                    {/* Scrollable Content Area */}
+                    <div className="p-6 space-y-6 overflow-y-auto flex-1">
 
                     {/* AI Model Selection */}
                     <div className="border border-slate-200 dark:border-slate-600 rounded-lg p-4">
@@ -170,7 +172,10 @@ export const ApiSettingsModal: React.FC<{
                         {!isUsingDefault && <p className="text-xs text-green-500 dark:text-green-400 mt-2 px-1 text-center">Đang hoạt động</p>}
                     </div>
                     
-                    <div className="flex space-x-3 pt-4">
+                    </div>
+                    
+                    {/* Fixed Footer with Buttons */}
+                    <div className="flex space-x-3 p-6 pt-4 border-t border-slate-200 dark:border-slate-600 bg-white/90 dark:bg-[#252945]/90 rounded-b-lg">
                         <button
                             onClick={onClose}
                             className="w-full px-4 py-2.5 bg-slate-600 dark:bg-slate-700 hover:bg-slate-500 dark:hover:bg-slate-600 rounded-md text-white text-base font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-slate-500"

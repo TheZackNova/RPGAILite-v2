@@ -7,6 +7,7 @@ export interface GameSettings {
     memoryAutoClean: boolean;
     historyAutoCompress: boolean;
     maxActiveHistoryEntries: number;
+    historyCompressionThreshold: number;
     themeColor: string;
     enableCOT: boolean;
 }
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: GameSettings = {
     memoryAutoClean: true,
     historyAutoCompress: true,
     maxActiveHistoryEntries: 100,
+    historyCompressionThreshold: 72,
     themeColor: 'purple',
     enableCOT: false,
 };
@@ -387,6 +389,48 @@ export const GameSettingsModal: React.FC<{
                         </div>
                     </div>
 
+                    {/* History Compression Threshold Slider */}
+                    <div className="space-y-3 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">📦</span>
+                                    <span className="font-semibold text-slate-800 dark:text-gray-100">
+                                        Ngưỡng nén lịch sử
+                                    </span>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                    Số lượng mục lịch sử tích lũy trước khi tự động nén. Thấp hơn = nén sớm hơn
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    Giá trị: {localSettings.historyCompressionThreshold ?? 72}
+                                </span>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                    30 - 200
+                                </div>
+                            </div>
+                            <input
+                                type="range"
+                                min="30"
+                                max="200"
+                                step="5"
+                                value={localSettings.historyCompressionThreshold ?? 72}
+                                onChange={(e) => setLocalSettings(prev => ({ ...prev, historyCompressionThreshold: parseInt(e.target.value) }))}
+                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer 
+                                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+                                         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 
+                                         [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 
+                                         [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white
+                                         [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full 
+                                         [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:shadow-lg"
+                            />
+                        </div>
+                    </div>
+
                     {/* Current Settings Info */}
                     <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
                         <h5 className="font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2">
@@ -400,6 +444,7 @@ export const GameSettingsModal: React.FC<{
                             <div>Dọn dẹp bộ nhớ: {localSettings.memoryAutoClean ? '✅ Bật' : '❌ Tắt'}</div>
                             <div>Nén lịch sử: {localSettings.historyAutoCompress ? '✅ Bật' : '❌ Tắt'}</div>
                             <div>Lịch sử tối đa: {localSettings.maxActiveHistoryEntries ?? 100} mục</div>
+                            <div>Ngưỡng nén lịch sử: {localSettings.historyCompressionThreshold ?? 72} mục</div>
                         </div>
                     </div>
                 </div>

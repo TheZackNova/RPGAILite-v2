@@ -18,6 +18,7 @@ export const useGameSettings = (): [GameSettingsState, GameSettingsActions] => {
             memoryAutoClean: true,
             historyAutoCompress: true,
             maxActiveHistoryEntries: 100,
+            historyCompressionThreshold: 72,
             themeColor: 'purple',
             enableCOT: false,
             // Entity Export Settings

@@ -423,7 +423,8 @@ export const GameScreen: React.FC<{
             // Use UnifiedMemoryManager with custom configuration based on game settings
             const cleanupConfig = {
                 ...UnifiedMemoryManager.DEFAULT_CONFIG,
-                maxActiveHistoryEntries: gameSettings.maxActiveHistoryEntries || 100
+                maxActiveHistoryEntries: gameSettings.maxActiveHistoryEntries || 100,
+                historyCompressionThreshold: gameSettings.historyCompressionThreshold || 72
             };
             unifiedCleanupResult = UnifiedMemoryManager.coordinatedCleanup(currentState, cleanupConfig);
             
@@ -881,7 +882,8 @@ export const GameScreen: React.FC<{
         // Use unified memory manager for coordinated cleanup with custom configuration
         const cleanupConfig = {
             ...UnifiedMemoryManager.DEFAULT_CONFIG,
-            maxActiveHistoryEntries: gameSettings.maxActiveHistoryEntries || 100
+            maxActiveHistoryEntries: gameSettings.maxActiveHistoryEntries || 100,
+            historyCompressionThreshold: gameSettings.historyCompressionThreshold || 72
         };
         const unifiedResult = UnifiedMemoryManager.coordinatedCleanup(currentState, cleanupConfig);
         

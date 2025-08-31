@@ -3,6 +3,15 @@ import type { ChangelogEntry } from '../types.ts';
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.49.1',
+    date: '2025-08-31',
+    changes: [
+      { type: 'feature', text: 'History Compression Threshold Setting - Thêm cài đặt "Ngưỡng nén lịch sử" vào Game Settings Modal với slider 30-200 mục (mặc định 72). User có thể điều chỉnh khi nào auto history compression kích hoạt: thấp hơn = nén sớm hơn, cao hơn = giữ lịch sử lâu hơn.' },
+      { type: 'improvement', text: 'Dynamic History Compression Configuration - UnifiedMemoryManager giờ sử dụng historyCompressionThreshold từ gameSettings thay vì hardcoded value. Cả 2 cleanup paths trong GameScreen đều respect user setting, đảm bảo consistent behavior across tất cả memory management operations.' },
+      { type: 'fix', text: 'API Settings Modal Height Fix - Sửa lỗi modal quá cao khi thêm nhiều API keys, buttons bị che khuất. Thêm max-height (90vh), scrollable content area, và fixed footer với buttons. Modal giờ responsive và buttons luôn accessible bất kể số lượng API keys.' },
+    ],
+  },
+  {
     version: '1.49.0',
     date: '2025-08-31',
     changes: [
