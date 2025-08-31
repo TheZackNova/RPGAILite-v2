@@ -51,56 +51,7 @@ export class EnhancedRAGSystem {
         // Initialize any preprocessing needed
     }
     
-    /**
-     * Conditionally build COT template strings based on user setting
-     */
-    private buildCOTTemplate(enableCOT: boolean, section: 'thinking-steps' | 'json-example' | 'final-reminder'): string {
-        if (!enableCOT) {
-            switch (section) {
-                case 'thinking-steps':
-                    return '';
-                case 'json-example':
-                    return `{
-  "story": "...",
-  "npcs_present": [...],
-  "choices": [...]
-}`;
-                case 'final-reminder':
-                    return '';
-            }
-        }
-        
-        // Default COT templates when enabled
-        switch (section) {
-            case 'thinking-steps':
-                return `**BẮNG BUỘC**: Bạn phải bao gồm field "cot_reasoning" chứa:
-**BƯỚC MỘT: PHÂN TÍCH TÌNH HUỐNG HIỆN TẠI**
-Hãy viết ra suy nghĩ của bạn về tình huống hiện tại:
-
-**BƯỚC HAI: CÂN BẰNG QUYỀN LỰC & HIỆU ỨNG HÀNH ĐỘNG**
-Phân tích cân bằng quyền lực:
-
-**BƯỚC BA: KẾ HOẠCH DIỄN BIẾN**
-Lập kế hoạch cho diễn biến câu chuyện:
-
-**BƯỚC BỐN: SÁNG TẠO & TRÁNH LẶP LẠI**
-Làm thế nào để tránh nhàm chán:`;
-
-            case 'json-example':
-                return `{
-  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]...",
-  "story": "...",
-  "npcs_present": [...],
-  "choices": [...]
-}`;
-
-            case 'final-reminder':
-                return `❌ SAI: Không có field "cot_reasoning"
-✅ ĐÚNG: Có field "cot_reasoning" với suy nghĩ đầy đủ`;
-        }
-        
-        return '';
-    }
+    // Removed unused buildCOTTemplate method - COT is now handled only by buildAdvancedCOTPrompt when enabled
 
     // Main entry point - builds the enhanced RAG prompt
     public buildEnhancedPrompt(
@@ -1958,28 +1909,8 @@ Tự hỏi bản thân:
         let prompt = "";
         
         // COT INSTRUCTIONS (CONDITIONAL BASED ON USER SETTING)
-        if (enableCOT) {
-            prompt += `🚨🚨🚨 CRITICAL INSTRUCTION - READ FIRST 🚨🚨🚨
-
-MANDATORY JSON RESPONSE FORMAT:
-YOU MUST INCLUDE "cot_reasoning" FIELD WITH YOUR THINKING!
-
-Example JSON:
-{
-  "cot_reasoning": "BƯỚC MỘT: Analyzing current situation... BƯỚC HAI: Considering power dynamics... BƯỚC BA: My strategy is... BƯỚC 4B: For choices, I need 7-9 diverse categories...",
-  "story": "...",
-  "choices": [...]
-}
-
-❌ WRONG: Missing cot_reasoning field
-✅ CORRECT: Include cot_reasoning with detailed steps
-
-MANDATORY! THE cot_reasoning FIELD IS REQUIRED!
-
-========================================
-
-`;
-        } else {
+        // COT instructions handled by advanced COT prompt later - no early duplication needed
+        if (!enableCOT) {
             prompt += `🚨🚨🚨 RESPONSE FORMAT - READ FIRST 🚨🚨🚨
 
 JSON RESPONSE FORMAT (COT DISABLED):
@@ -2059,6 +1990,7 @@ Example JSON:
         }
         
         // Add advanced Chain of Thought reasoning (CONDITIONAL)
+        console.log(`🔍 DEBUG COT: enableCOT = ${enableCOT} (${typeof enableCOT})`);
         if (enableCOT) {
             const cotReasoning = this.buildAdvancedCOTPrompt(action, gameState);
             if (cotReasoning) {
@@ -2136,38 +2068,7 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
 • KHÔNG BAO GIỜ tạo kỹ năng trùng lặp - luôn dùng SKILL_UPDATE để thay thế
 • Ví dụ: "Thiên Hồ Huyễn Linh Bí Pháp (đang phong ấn)" → "Thiên Hồ Huyễn Linh Bí Pháp (Sơ Giải)" → dùng SKILL_UPDATE`;
         
-        // Add COT instructions at the end of every prompt
-        prompt += `
-
-🚨 QUAN TRỌNG - BẮT BUỘC TUÂN THỦ 🚨
-
-**BẮT BUỘC**: JSON response PHẢI có field "cot_reasoning"!
-
-**FORMAT CỤ THỂ**:
-{
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3A: Hành động là [loại], tôi sẽ hoàn thành từ [điểm A] đến [điểm B] trong lượt này, không để dang dở... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], nội tâm 'suy nghĩ về player', NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể], nội tâm 'cảm xúc thực tế'. LOẠI BỎ NPCs: [NPCs bị loại khỏi presence tab và lý do]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong + inner thoughts created, WORD COUNT VERIFICATION: Story hiện tại có X từ, cần [thêm/bớt] [chi tiết cụ thể] để đạt 400-500 từ...",
-  "story": "...",
-  "npcs_present": [
-    {
-      "name": "Tên đầy đủ của NPC (BẮT BUỘC - không được để trống)",
-      "gender": "Nam/Nữ/Không rõ (BẮT BUỘC - phải có giá trị cụ thể)", 
-      "age": "Tuổi cụ thể (VD: '25 tuổi', 'Trung niên', 'Già') - KHÔNG được để trống",
-      "appearance": "Mô tả ngoại hình chi tiết (ít nhất 10-15 từ) - BẮT BUỘC điền",
-      "description": "Mô tả chi tiết về NPC, vai trò, tính cách (ít nhất 15-20 từ) - BẮT BUỘC", 
-      "relationship": "Bạn bè/Trung lập/Đồng minh/Thù địch/Tình yêu/Gia đình/Chưa rõ - BẮT BUỘC chọn 1 (bằng tiếng Việt)",
-      "inner_thoughts": "Nội tâm NPC về tình huống hiện tại (15-25 từ) - BẮT BUỘC có nội dung"
-    }
-  ],
-  "choices": [...]
-}
-
-❌ SAI: Thiếu field "cot_reasoning"
-✅ ĐÚNG: Có field "cot_reasoning" với suy nghĩ đầy đủ
-
-**TUÂN THỦ NGAY BÂY GIỜ - KHÔNG CÓ NGOẠI LỆ!**
-
-🔥 **JSON PHẢI CÓ:** "cot_reasoning" field
-🔥 **KHÔNG ĐƯỢC THIẾU:** "cot_reasoning" field"`;
+        // COT instructions are now handled by the advanced COT prompt above - no final duplication needed
         
         return prompt;
     }
@@ -2203,7 +2104,7 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
     // ADDED: Emergency truncation method
     private emergencyTruncation(prompt: string): string {
         const totalTokens = this.estimateTokens(prompt);
-        const hardLimit = 85000; // Emergency limit well under 100k
+        const hardLimit = 185000; // Emergency limit well under 100k
         
         if (totalTokens <= hardLimit) {
             return prompt;
