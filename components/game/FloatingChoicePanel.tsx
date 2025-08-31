@@ -94,7 +94,7 @@ export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
     }, [localCustomAction, handleAction]);
 
     return (
-        <div className={`absolute bottom-0 left-4 right-4 z-20 ${className}`}>
+        <div className={`fixed bottom-0 left-4 right-4 z-50 ${className}`}>
             {/* Toggle Button */}
             <div className="flex justify-center mb-2">
                 <button
