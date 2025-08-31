@@ -181,37 +181,53 @@ export const GameScreen: React.FC<{
         return commandTagProcessor.parseStoryAndTags(storyText, applySideEffects);
     }, [commandTagProcessor]);
 
-    // Define response schema
-    const responseSchema = {
-      type: Type.OBJECT,
-      properties: {
-        cot_reasoning: { type: Type.STRING, description: "MANDATORY: Chain of Thought reasoning steps in Vietnamese, starting with 'BƯỚC MỘT:', 'BƯỚC HAI:', etc." },
-        story: { type: Type.STRING, description: "Phần văn bản tường thuật của câu chuyện, bao gồm các định dạng đặc biệt và các thẻ lệnh ẩn." },
-        npcs_present: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING, description: "Tên NPC" },
-              gender: { type: Type.STRING, description: "Giới tính NPC" },
-              age: { type: Type.STRING, description: "Tuổi NPC" },
-              appearance: { type: Type.STRING, description: "Mô tả ngoại hình NPC" },
-              description: { type: Type.STRING, description: "Mô tả về NPC" },
-              relationship: { type: Type.STRING, description: "Quan hệ với player" },
-              inner_thoughts: { type: Type.STRING, description: "Nội tâm NPC về hành động player" }
+    // Define response schema - conditional based on COT setting
+    const responseSchema = useMemo(() => {
+        const baseProperties = {
+            story: { type: Type.STRING, description: "Phần văn bản tường thuật của câu chuyện, bao gồm các định dạng đặc biệt và các thẻ lệnh ẩn." },
+            npcs_present: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Tên NPC" },
+                  gender: { type: Type.STRING, description: "Giới tính NPC" },
+                  age: { type: Type.STRING, description: "Tuổi NPC" },
+                  appearance: { type: Type.STRING, description: "Mô tả ngoại hình NPC" },
+                  description: { type: Type.STRING, description: "Mô tả về NPC" },
+                  relationship: { type: Type.STRING, description: "Quan hệ với player" },
+                  inner_thoughts: { type: Type.STRING, description: "Nội tâm NPC về hành động player" }
+                },
+                required: ['name', 'inner_thoughts']
+              },
+              description: "Danh sách các NPC hiện diện trong bối cảnh hiện tại với nội tâm của họ."
             },
-            required: ['name', 'inner_thoughts']
-          },
-          description: "Danh sách các NPC hiện diện trong bối cảnh hiện tại với nội tâm của họ."
-        },
-        choices: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-          description: "Một mảng gồm 4-6 lựa chọn cho người chơi."
-        },
-      },
-      required: ['cot_reasoning', 'story', 'choices']
-    };
+            choices: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "Một mảng gồm 4-6 lựa chọn cho người chơi."
+            }
+        };
+
+        // Add COT reasoning field only if COT is enabled
+        const properties = gameSettings.enableCOT 
+            ? {
+                cot_reasoning: { type: Type.STRING, description: "MANDATORY: Chain of Thought reasoning steps in Vietnamese, starting with 'BƯỚC MỘT:', 'BƯỚC HAI:', etc." },
+                ...baseProperties
+              }
+            : baseProperties;
+
+        // Required fields also conditional based on COT setting
+        const required = gameSettings.enableCOT 
+            ? ['cot_reasoning', 'story', 'choices']
+            : ['story', 'choices'];
+
+        return {
+            type: Type.OBJECT,
+            properties,
+            required
+        };
+    }, [gameSettings.enableCOT]);
 
     // Function to trigger high token usage cooldown
     const triggerHighTokenCooldown = useCallback(() => {

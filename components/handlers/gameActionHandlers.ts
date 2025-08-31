@@ -469,6 +469,8 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
 
         let nsfwInstructionPart = isNsfwRequest && currentGameState.worldData.allowNsfw ? `\nLƯU Ý ĐẶC BIỆT: ...` : '';
         
+        console.log(`🔍 DEBUG: enableCOT parameter before calling buildEnhancedRagPrompt: ${enableCOT} (type: ${typeof enableCOT})`);
+        
         const userPrompt = buildEnhancedRagPrompt(originalAction, currentGameState, ruleChangeContext, nsfwInstructionPart, enableCOT);
         
         // DEBUG: Enhanced prompt analysis for COT tracking

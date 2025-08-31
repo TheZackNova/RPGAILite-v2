@@ -63,6 +63,8 @@ export class EnhancedRAGSystem {
     ): string {
         const startTime = performance.now();
         
+        console.log(`🔍 DEBUG: buildEnhancedPrompt received enableCOT: ${enableCOT} (type: ${typeof enableCOT})`);
+        
         // Defensive check for gameState
         if (!gameState) {
             console.error('🚨 buildEnhancedPrompt: gameState is null/undefined, using fallback');
@@ -1086,6 +1088,8 @@ export class EnhancedRAGSystem {
 
 🎯 **FORMAT BẮT BUỘC**: Bao gồm "cot_reasoning" field trong JSON với suy nghĩ chi tiết!
 
+⚠️ **QUAN TRỌNG - GIỚI HẠN ĐỘ DÀI**: Mỗi bước COT chỉ được 15-30 từ. Viết ngắn gọn, súc tích!
+
 **BẮNG BUỘC**: Bạn phải bao gồm field "cot_reasoning" chứa:
 **BƯỚC MỘT: PHÂN TÍCH TÌNH HUỐNG HIỆN TẠI**
 Hãy viết ra suy nghĩ của bạn về tình huống hiện tại:
@@ -1214,7 +1218,7 @@ Tự hỏi bản thân:
 **CUỐI CÙNG**: Tạo JSON response với tất cả suy nghĩ trên trong field "cot_reasoning":
 
 {
-  "cot_reasoning": "BƯỚC MỘT: [Tất cả phân tích tình huống]... BƯỚC HAI: [Cân bằng quyền lực]... BƯỚC BA: [Kế hoạch]... BƯỚC 3A: [PHÂN TÍCH HÀNH ĐỘNG - Loại: X, phải hoàn thành 100% trong lượt này, kế hoạch từ bắt đầu đến kết thúc]... BƯỚC 3B: [KIỂM TRA NPCs - liệt kê từng NPC và hành động cụ thể của họ + nội tâm + LOẠI BỎ NPCs không hoạt động trong 3 lượt]... BƯỚC BỐN: [Sáng tạo]... BƯỚC 4B: [Thiết kế lựa chọn theo yêu cầu]... BƯỚC NĂM: [Kiểm tra cuối + NPC validation + WORD COUNT VERIFICATION: Tôi đếm được X từ trong story, cần thêm/bớt Y từ để đạt 400-500 từ]",
+  "cot_reasoning": "BƯỚC MỘT: [Phân tích tình huống]. BƯỚC HAI: [Cân bằng quyền lực]. BƯỚC BA: [Kế hoạch]. BƯỚC 3A: [Hành động loại X, hoàn thành 100%]. BƯỚC 3B: [NPCs làm gì + nội tâm. Loại bỏ NPCs không hoạt động]. BƯỚC BỐN: [Sáng tạo]. BƯỚC 4B: [7-9 choices đa dạng]. BƯỚC NĂM: [Kiểm tra. Story X từ, cần thêm chi tiết]",
   "story": "...",
   "npcs_present": [
     {
@@ -1237,7 +1241,7 @@ Tự hỏi bản thân:
 **FORMAT CỤ THỂ - BẮT BUỘC THEO ĐÚNG**:
 
 {
-  "cot_reasoning": "BƯỚC MỘT: Tôi thấy tình huống hiện tại là... BƯỚC HAI: Về cân bằng quyền lực, tôi cần chú ý... BƯỚC BA: Kế hoạch của tôi là... BƯỚC 3A: Hành động '[action]' là loại [di chuyển/tương tác/khác], độ phức tạp [mức độ]. Tôi PHẢI hoàn thành 100% trong lượt này: bắt đầu từ [X], quá trình [Y], kết quả [Z]... BƯỚC 3B: NPCs trong câu chuyện - [Liệt kê từng NPC]: NPC1 sẽ làm [hành động cụ thể], nội tâm 'suy nghĩ về player', NPC2 sẽ nói [lời cụ thể] và phản ứng [cách cụ thể], nội tâm 'cảm xúc thực tế'. LOẠI BỎ NPCs: [NPC X bị loại vì không hoạt động 3 lượt, NPC Y bị loại vì chỉ xuất hiện thụ động]... BƯỚC BỐN: Để tránh nhàm chán, tôi sẽ... BƯỚC 4B: Cho lựa chọn, tôi cần 7-9 choices đa dạng thể loại... BƯỚC NĂM: Kiểm tra cuối - NPCs đã plan xong + inner thoughts created, WORD COUNT CHECK: Tôi dự tính story sẽ có khoảng X từ, cần thêm chi tiết [cụ thể gì] để đạt 400-500 từ...",
+  "cot_reasoning": "BƯỚC MỘT: Tình huống hiện tại là [X]. BƯỚC HAI: Cân bằng quyền lực cần chú ý [Y]. BƯỚC BA: Kế hoạch là [Z]. BƯỚC 3A: Hành động '[action]' loại [di chuyển/tương tác], hoàn thành 100% lượt này. BƯỚC 3B: NPCs: [NPC1] làm [hành động], nội tâm '[cảm xúc]'. Loại bỏ [NPC X] vì không hoạt động 3 lượt. BƯỚC BỐN: Tránh nhàm chán bằng [phương pháp]. BƯỚC 4B: Tạo 7-9 choices đa dạng [combat/social/exploration]. BƯỚC NĂM: Story khoảng [X] từ, cần thêm [chi tiết] để đạt 400-500 từ.",
   "story": "...",
   "npcs_present": [
     {
@@ -1256,7 +1260,7 @@ Tự hỏi bản thân:
 ❌ SAI: Không có field "cot_reasoning"
 ✅ ĐÚNG: Có field "cot_reasoning" với suy nghĩ đầy đủ
 
-**LẦN NÀY PHẢI THEO FORMAT TRÊN - KHÔNG CÓ LỰA CHỌN KHÁC!**
+**LẦN NÀY PHẢI THEO FORMAT TRÊN - MỖI BƯỚC COT CHỈ 15-30 TỪ - KHÔNG CÓ LỰA CHỌN KHÁC!**
 `;
         
         console.log(`✅ COT: Advanced COT prompt completed`, {
