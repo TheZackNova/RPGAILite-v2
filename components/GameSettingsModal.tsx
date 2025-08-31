@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: GameSettings = {
     historyAutoCompress: true,
     maxActiveHistoryEntries: 100,
     themeColor: 'purple',
-    enableCOT: true,
+    enableCOT: false,
 };
 
 const FONT_FAMILIES = [
@@ -336,7 +336,7 @@ export const GameSettingsModal: React.FC<{
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    checked={localSettings.enableCOT ?? true}
+                                    checked={localSettings.enableCOT ?? false}
                                     onChange={(e) => setLocalSettings(prev => ({ ...prev, enableCOT: e.target.checked }))}
                                     className="sr-only peer"
                                 />
