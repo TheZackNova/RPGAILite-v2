@@ -14,6 +14,11 @@ export interface GameActionHandlersParams {
     rotateKey: () => void;
     rehydratedChoices: string[];
     
+    // AI Model Settings
+    temperature: number;
+    topK: number;
+    topP: number;
+    
     // State setters
     setIsLoading: (loading: boolean) => void;
     setChoices: (choices: string[]) => void;
@@ -47,6 +52,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
     const {
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
+        temperature, topK, topP,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
@@ -69,7 +75,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         const writingStyleText = worldData.writingStyle === 'first_person' ? 'Ngôi thứ nhất - Nhân vật chính xưng "Ta/Tôi"' : 'Ngôi thứ hai - "Ngươi" là nhân vật chính';
         const nsfwInstruction = worldData.allowNsfw ? 'Cho phép. Kích hoạt quy tắc nội dung 18+ của Quản Trò. Viết một cách trần trụi, bạo lực, tục tĩu và không giới hạn.' : 'Không, AI phải tránh các chủ đề và mô tả 18+.';
         
-        const activeRules = customRules.filter(r => r.alwaysActive);
+        const activeRules = customRules.filter(r => r.alwaysActive && r.isActive);
         let customRulesContext = '';
         if (activeRules.length > 0) {
             customRulesContext = `\n--- TRI THỨC & LUẬT LỆ TÙY CHỈNH (ĐANG ÁP DỤNG) ---\n${activeRules.map(r => `- ${r.content}`).join('\n')}\n--- KẾT THÚC ---\n`;
@@ -308,10 +314,10 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                     systemInstruction: systemInstruction, 
                     responseMimeType: "application/json", 
                     responseSchema: responseSchema,
-                    // Add randomness to prevent duplicate responses
-                    temperature: 0.9, // Higher temperature for more variability
-                    topP: 0.95,
-                    topK: 40
+                    // Use configured AI settings
+                    temperature: temperature,
+                    topP: topP,
+                    topK: topK
                 }
             });
             const turnTokens = response.usageMetadata?.totalTokenCount || 0;
@@ -440,9 +446,10 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                         systemInstruction: systemInstruction, 
                         responseMimeType: "application/json", 
                         responseSchema: responseSchema,
-                        temperature: 1.0, // Even higher temperature for retry
-                        topP: 0.9,
-                        topK: 30
+                        // Use higher values for retry to increase diversity
+                        temperature: Math.min(temperature + 0.1, 2.0),
+                        topP: Math.max(topP - 0.05, 0.1),
+                        topK: Math.max(topK - 10, 10)
                     }
                 });
                 

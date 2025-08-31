@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, memo } from 'react';
 import type { CustomRule } from './types.ts';
 import { RuleLogic } from './types.ts';
 import { RuleHelpers } from './utils/RuleHelpers.ts';
@@ -14,7 +14,7 @@ interface EnhancedCustomRulesModalProps {
 type ViewMode = 'simple' | 'advanced';
 type SortMode = 'priority' | 'alphabetical' | 'category' | 'recent';
 
-export const EnhancedCustomRulesModal: React.FC<EnhancedCustomRulesModalProps> = ({ 
+const EnhancedCustomRulesModalComponent: React.FC<EnhancedCustomRulesModalProps> = ({ 
     isOpen, onClose, onSave, currentRules 
 }) => {
     if (!isOpen) return null;
@@ -974,3 +974,7 @@ export const EnhancedCustomRulesModal: React.FC<EnhancedCustomRulesModalProps> =
         </div>
     );
 };
+
+// Export memoized version with proper typing for React 19
+export const EnhancedCustomRulesModal = memo<EnhancedCustomRulesModalProps>(EnhancedCustomRulesModalComponent);
+EnhancedCustomRulesModal.displayName = 'EnhancedCustomRulesModal';

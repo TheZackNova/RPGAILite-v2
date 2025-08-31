@@ -5,13 +5,15 @@ interface InitializationProgressProps {
     currentStep: string;
     progress: number; // 0-100
     subStep?: string;
+    loreConcepts?: { name: string; description: string }[]; // Generated lore concepts
 }
 
 export const InitializationProgress: React.FC<InitializationProgressProps> = ({ 
     isVisible, 
     currentStep, 
     progress, 
-    subStep 
+    subStep,
+    loreConcepts 
 }) => {
     if (!isVisible) return null;
 
@@ -53,6 +55,27 @@ export const InitializationProgress: React.FC<InitializationProgressProps> = ({
                         </div>
                     )}
                 </div>
+
+                {/* Generated Lore Concepts */}
+                {loreConcepts && loreConcepts.length > 0 && (
+                    <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600">
+                        <div className="text-xs font-semibold text-slate-600 dark:text-gray-300 mb-2">
+                            ✨ Lore Concepts đã tạo ({loreConcepts.length})
+                        </div>
+                        <div className="max-h-24 overflow-y-auto space-y-1 text-left">
+                            {loreConcepts.map((concept, index) => (
+                                <div key={index} className="text-xs">
+                                    <span className="font-medium text-slate-700 dark:text-gray-200">
+                                        {concept.name}
+                                    </span>
+                                    <span className="text-slate-500 dark:text-gray-400 ml-1">
+                                        - {concept.description.substring(0, 60)}{concept.description.length > 60 ? '...' : ''}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Dots Animation */}
                 <div className="flex justify-center mt-4 space-x-1">

@@ -3,6 +3,17 @@ import type { ChangelogEntry } from '../types.ts';
 
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '1.49.0',
+    date: '2025-08-31',
+    changes: [
+      { type: 'feature', text: 'Enhanced Custom Rules Integration - Cải tiến logic custom rules trong generateInitialStory để AI sử dụng cả rules có "Active" VÀ "Always Active" được check (thay vì OR logic). Custom rules giờ tác động mạnh hơn vào câu chuyện khởi đầu với logic AND requirement.' },
+      { type: 'feature', text: 'Lore Concept Generation Progress Display - Thêm loreConcepts prop vào InitializationProgress component để hiển thị real-time các lore concepts được tạo ra. Progress bar giờ show count và preview description (60 chars) của generated concepts với scrollable UI.' },
+      { type: 'improvement', text: 'Re-enabled Lore Concept Generation - Khôi phục lore concept generation step trong startNewGame function (trước đây bị disable). Game initialization giờ tạo lore concepts từ active custom rules trước khi generate initial story, cung cấp context phong phú hơn cho AI.' },
+      { type: 'technical', text: 'React 19 Static Flag Compliance - Sửa React warnings về missing static flags trong MemoizedModals.tsx bằng cách wrap EnhancedCustomRulesModal và MapModal với React.memo() và thêm displayName properties. Cải thiện performance và development experience.' },
+      { type: 'technical', text: 'Modal Component Memoization - Refactor EnhancedCustomRulesModal và MapModal từ direct exports sang memoized components với proper TypeScript typing. Thêm displayName cho React DevTools và cải thiện re-render performance.' },
+    ],
+  },
+  {
     version: '1.48.0',
     date: '2025-08-30',
     changes: [

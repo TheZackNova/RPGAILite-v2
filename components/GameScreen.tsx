@@ -55,7 +55,7 @@ export const GameScreen: React.FC<{
     keyRotationNotification: string | null;
     onClearNotification: () => void;
 }> = ({ initialGameState, onBackToMenu, keyRotationNotification, onClearNotification }) => {
-    const { ai, isAiReady, apiKeyError, rotateKey, isUsingDefaultKey, userApiKeyCount, selectedModel } = useContext(AIContext);
+    const { ai, isAiReady, apiKeyError, rotateKey, isUsingDefaultKey, userApiKeyCount, selectedModel, temperature, topK, topP } = useContext(AIContext);
     
     // Refs
     const isGeneratingRef = useRef<boolean>(false);
@@ -243,11 +243,12 @@ export const GameScreen: React.FC<{
     const gameActionHandlers = useMemo(() => createGameActionHandlers({
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
+        temperature, topK, topP,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
-    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
+    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, temperature, topK, topP, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
 
     // Function to get current game state
     const getCurrentGameState = useCallback((): SaveData => {

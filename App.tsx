@@ -417,6 +417,17 @@ export default function App() {
   const [selectedAiModel, setSelectedAiModel] = useState(() => {
       return localStorage.getItem('selectedAiModel') || 'gemini-2.5-flash';
   });
+  
+  // --- AI Model Settings ---
+  const [aiTemperature, setAiTemperature] = useState(() => {
+      return parseFloat(localStorage.getItem('aiTemperature') || '0.9');
+  });
+  const [aiTopK, setAiTopK] = useState(() => {
+      return parseInt(localStorage.getItem('aiTopK') || '40', 10);
+  });
+  const [aiTopP, setAiTopP] = useState(() => {
+      return parseFloat(localStorage.getItem('aiTopP') || '0.95');
+  });
 
   // --- Thể hiện AI được memoized ---
   const activeKey = useMemo(() => {
@@ -462,6 +473,15 @@ export default function App() {
   const handleModelChange = (model: string) => {
       setSelectedAiModel(model);
       localStorage.setItem('selectedAiModel', model);
+  };
+
+  const handleAiSettingsChange = (settings: { temperature: number; topK: number; topP: number }) => {
+      setAiTemperature(settings.temperature);
+      setAiTopK(settings.topK);
+      setAiTopP(settings.topP);
+      localStorage.setItem('aiTemperature', settings.temperature.toString());
+      localStorage.setItem('aiTopK', settings.topK.toString());
+      localStorage.setItem('aiTopP', settings.topP.toString());
   };
 
   const handleRotateKey = () => {
@@ -732,9 +752,28 @@ Mô tả ngoại hình phải phù hợp với bối cảnh và tính cách, t�
       setInitCurrentStep('Đang phân tích quy tắc tùy chỉnh...');
       setInitSubStep('');
       
-      console.log('🎮 StartNewGame: Bỏ qua tạo LORE_CONCEPT tự động để giữ câu chuyện mở đầu sạch sẽ');
-      // LORE_CONCEPT generation is disabled during initial game creation to keep the opening story clean
-      // Custom rules and concepts will be activated during regular gameplay through the RAG system
+      // Lấy các quy tắc tùy chỉnh đang active
+      const activeCustomRules = customRules?.filter(r => r.alwaysActive && r.isActive) || [];
+      console.log('🎮 StartNewGame: Tìm thấy', activeCustomRules.length, 'quy tắc active');
+      
+      if (activeCustomRules.length > 0) {
+          setInitCurrentStep('Đang tạo Lore Concepts...');
+          setInitSubStep(`Xử lý ${activeCustomRules.length} quy tắc tùy chỉnh`);
+          
+          try {
+              const loreConcepts = await generateLoreConcepts(activeCustomRules);
+              // Thêm lore concepts vào initialEntities
+              Object.keys(loreConcepts).forEach(conceptName => {
+                  initialEntities[conceptName] = loreConcepts[conceptName];
+                  console.log(`🎮 StartNewGame: Đã thêm lore concept: ${conceptName}`);
+              });
+              console.log('🎮 StartNewGame: Tạo LORE_CONCEPT thành công, tổng số concepts:', Object.keys(loreConcepts).length);
+          } catch (error) {
+              console.error('🎮 StartNewGame: Lỗi khi tạo LORE_CONCEPT:', error);
+          }
+      } else {
+          console.log('🎮 StartNewGame: Không có quy tắc active, bỏ qua tạo LORE_CONCEPT');
+      }
 
       setInitProgress(80);
       setInitCurrentStep('Đang thiết lập trạng thái game...');
@@ -902,7 +941,7 @@ Mô tả ngoại hình phải phù hợp với bối cảnh và tính cách, t�
   }
 
   return (
-    <AIContext.Provider value={{ ai, isAiReady, apiKeyError, isUsingDefaultKey, userApiKeyCount: userApiKeys.length, rotateKey: handleRotateKey, selectedModel: selectedAiModel }}>
+    <AIContext.Provider value={{ ai, isAiReady, apiKeyError, isUsingDefaultKey, userApiKeyCount: userApiKeys.length, rotateKey: handleRotateKey, selectedModel: selectedAiModel, temperature: aiTemperature, topK: aiTopK, topP: aiTopP }}>
       <style>{`
         .am-kim {
             background: linear-gradient(135deg, #ca8a04, #eab308, #fde047);
@@ -957,6 +996,10 @@ Mô tả ngoại hình phải phù hợp với bối cảnh và tính cách, t�
           onSave={handleSaveApiKeys}
           selectedModel={selectedAiModel}
           onModelChange={handleModelChange}
+          temperature={aiTemperature}
+          topK={aiTopK}
+          topP={aiTopP}
+          onAiSettingsChange={handleAiSettingsChange}
         />
         <ChangelogModal
             isOpen={isChangelogModalOpen}

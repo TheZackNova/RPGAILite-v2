@@ -312,6 +312,9 @@ export interface AIContextType {
     userApiKeyCount: number;
     rotateKey: () => void;
     selectedModel: string;
+    temperature: number;
+    topK: number;
+    topP: number;
 }
 
 // --- Regex System Types ---

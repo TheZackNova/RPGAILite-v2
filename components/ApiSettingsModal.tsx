@@ -10,11 +10,18 @@ export const ApiSettingsModal: React.FC<{
     onSave: (keys: string[]) => void;
     selectedModel: string;
     onModelChange: (model: string) => void;
-}> = ({ isOpen, onClose, userApiKeys, isUsingDefault, onSave, selectedModel, onModelChange }) => {
+    temperature: number;
+    topK: number;
+    topP: number;
+    onAiSettingsChange: (settings: { temperature: number; topK: number; topP: number }) => void;
+}> = ({ isOpen, onClose, userApiKeys, isUsingDefault, onSave, selectedModel, onModelChange, temperature, topK, topP, onAiSettingsChange }) => {
     if (!isOpen) return null;
     
     const [keys, setKeys] = useState<string[]>(userApiKeys);
     const [currentModel, setCurrentModel] = useState<string>(selectedModel);
+    const [currentTemperature, setCurrentTemperature] = useState<number>(temperature);
+    const [currentTopK, setCurrentTopK] = useState<number>(topK);
+    const [currentTopP, setCurrentTopP] = useState<number>(topP);
 
     const handleKeyChange = (index: number, value: string) => {
         const newKeys = [...keys];
@@ -34,6 +41,11 @@ export const ApiSettingsModal: React.FC<{
     const handleSaveClick = () => {
         onSave(keys);
         onModelChange(currentModel);
+        onAiSettingsChange({
+            temperature: currentTemperature,
+            topK: currentTopK,
+            topP: currentTopP
+        });
         onClose();
     };
 
@@ -52,8 +64,73 @@ export const ApiSettingsModal: React.FC<{
                             className="w-full px-4 py-2.5 bg-white dark:bg-[#373c5a] border border-slate-300 dark:border-slate-600 rounded-md text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75"
                         >
                             <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-                            <option value="gemini-2.5-flash-preview-05-20">gemini-2.5-flash-preview-05-20</option>
+                            <option value="gemini-2.5-pro">gemini-2.5-pro</option>
                         </select>
+                    </div>
+
+                    {/* AI Model Parameters */}
+                    <div className="border border-slate-200 dark:border-slate-600 rounded-lg p-4 space-y-4">
+                        <p className="font-semibold text-sm text-slate-800 dark:text-gray-300">Cài đặt Model AI:</p>
+                        
+                        {/* Temperature */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm text-slate-700 dark:text-gray-300">Nhiệt độ (Temperature)</label>
+                                <span className="text-sm font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-800 dark:text-gray-200">
+                                    {currentTemperature.toFixed(2)}
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="2"
+                                step="0.01"
+                                value={currentTemperature}
+                                onChange={(e) => setCurrentTemperature(parseFloat(e.target.value))}
+                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Điều chỉnh độ sáng tạo: thấp = nhất quán, cao = đa dạng</p>
+                        </div>
+
+                        {/* Top K */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm text-slate-700 dark:text-gray-300">Top K</label>
+                                <span className="text-sm font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-800 dark:text-gray-200">
+                                    {Math.round(currentTopK)}
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={currentTopK}
+                                onChange={(e) => setCurrentTopK(parseInt(e.target.value))}
+                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Giới hạn từ vựng: thấp = tập trung, cao = đa dạng từ ngữ</p>
+                        </div>
+
+                        {/* Top P */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label className="text-sm text-slate-700 dark:text-gray-300">Top P</label>
+                                <span className="text-sm font-mono bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-800 dark:text-gray-200">
+                                    {currentTopP.toFixed(2)}
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={currentTopP}
+                                onChange={(e) => setCurrentTopP(parseFloat(e.target.value))}
+                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Lựa chọn từ theo xác suất: thấp = chặt chẽ, cao = linh hoạt</p>
+                        </div>
                     </div>
 
                     {/* Custom API Key Section */}

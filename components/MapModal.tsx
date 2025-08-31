@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import type { Entity } from './types.ts';
 import { getIconForLocation } from './utils.ts';
 import * as GameIcons from './GameIcons.tsx';
@@ -109,14 +109,16 @@ const MapLegend = ({ isCollapsed, onToggle }: { isCollapsed: boolean; onToggle: 
     );
 };
 
-export const MapModal: React.FC<{
+interface MapModalProps {
     isOpen: boolean;
     onClose: () => void;
     locations: Entity[];
     currentLocationName: string;
     discoveryOrder: string[];
     onLocationClick?: (locationName: string) => void;
-}> = ({ isOpen, onClose, locations, currentLocationName, discoveryOrder, onLocationClick }) => {
+}
+
+const MapModalComponent: React.FC<MapModalProps> = ({ isOpen, onClose, locations, currentLocationName, discoveryOrder, onLocationClick }) => {
     if (!isOpen) return null;
     
     const svgRef = useRef<SVGSVGElement>(null);
@@ -636,3 +638,7 @@ export const MapModal: React.FC<{
         </div>
     );
 };
+
+// Export memoized version with proper typing for React 19
+export const MapModal = memo<MapModalProps>(MapModalComponent);
+MapModal.displayName = 'MapModal';
