@@ -1235,6 +1235,20 @@ export const createCommandTagProcessor = (params: CommandTagProcessorParams) => 
                                         });
                                     }
                                 } else {
+                                    // Debug logging for currentExp updates
+                                    if (finalUpdateData.currentExp !== undefined) {
+                                        const existingExp = newEntities[targetName].currentExp;
+                                        console.log(`🔢 ENTITY_UPDATE currentExp: ${targetName}`, {
+                                            existing: existingExp,
+                                            existingType: typeof existingExp,
+                                            incoming: finalUpdateData.currentExp,
+                                            incomingType: typeof finalUpdateData.currentExp
+                                        });
+                                        
+                                        // Ensure currentExp is always a number
+                                        finalUpdateData.currentExp = Number(finalUpdateData.currentExp) || 0;
+                                    }
+                                    
                                     updatedEntity = { ...newEntities[targetName], ...finalUpdateData };
                                     
                                     // Check realm progression if experience was updated
