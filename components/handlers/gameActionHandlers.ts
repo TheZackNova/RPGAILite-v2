@@ -1,8 +1,211 @@
 import { GoogleGenAI } from "@google/genai";
-import type { GameHistoryEntry, SaveData, RegexRule } from '../types';
+import type { GameHistoryEntry, SaveData, RegexRule, NPCPresent } from '../types';
 import { buildEnhancedRagPrompt } from '../promptBuilder';
 import { createAutoTrimmedStoryLog } from '../utils/storyLogUtils';
 import { regexEngine, RegexPlacement } from '../utils/RegexEngine';
+
+/**
+ * Enhances NPC data by filling missing fields with intelligent defaults
+ * or extracting information from the story text
+ */
+const enhanceNPCData = (rawNPCs: NPCPresent[], storyText: string): NPCPresent[] => {
+    if (!rawNPCs || rawNPCs.length === 0) return [];
+    
+    return rawNPCs.map(npc => {
+        const enhanced: NPCPresent = { ...npc };
+        
+        // Ensure name is always present
+        if (!enhanced.name || enhanced.name.trim() === '') {
+            enhanced.name = 'NPC không tên';
+        }
+        
+        // Enhance gender field
+        if (!enhanced.gender || enhanced.gender === 'Không rõ' || enhanced.gender.trim() === '') {
+            // Try to infer from name or story context
+            const name = enhanced.name.toLowerCase();
+            const story = storyText.toLowerCase();
+            
+            // Common Vietnamese male names
+            const maleNames = ['minh', 'nam', 'hùng', 'dũng', 'hải', 'thành', 'long', 'khang', 'phúc', 'an', 'bảo', 'đức', 'tuấn', 'tùng', 'quang'];
+            // Common Vietnamese female names  
+            const femaleNames = ['linh', 'hoa', 'mai', 'lan', 'thu', 'nga', 'hương', 'trang', 'my', 'anh', 'thanh', 'thảo', 'nhi', 'vy', 'như'];
+            
+            if (maleNames.some(maleName => name.includes(maleName)) || 
+                story.includes(`ông ${enhanced.name.toLowerCase()}`) || 
+                story.includes(`anh ${enhanced.name.toLowerCase()}`)) {
+                enhanced.gender = 'Nam';
+            } else if (femaleNames.some(femaleName => name.includes(femaleName)) || 
+                       story.includes(`bà ${enhanced.name.toLowerCase()}`) || 
+                       story.includes(`chị ${enhanced.name.toLowerCase()}`)) {
+                enhanced.gender = 'Nữ';
+            } else {
+                enhanced.gender = 'Không rõ';
+            }
+        }
+        
+        // Enhance age field
+        if (!enhanced.age || enhanced.age === 'Không rõ' || enhanced.age.trim() === '') {
+            // Try to extract age from story or infer from context
+            const ageMatch = storyText.match(new RegExp(`${enhanced.name}.*?(\\d{1,3})\\s*tuổi`, 'i'));
+            if (ageMatch) {
+                enhanced.age = ageMatch[1] + ' tuổi';
+            } else {
+                // More detailed age inference based on name patterns and context
+                const name = enhanced.name.toLowerCase();
+                const story = storyText.toLowerCase();
+                
+                // Age keywords in story
+                if (story.includes('già') || story.includes('lão') || story.includes('cao tuổi')) {
+                    enhanced.age = 'Cao tuổi (60+ tuổi)';
+                } else if (story.includes('trẻ') || story.includes('thiếu niên') || story.includes('teen')) {
+                    enhanced.age = 'Trẻ (15-20 tuổi)';
+                } else if (story.includes('thanh niên') || story.includes('trai trẻ') || story.includes('gái trẻ')) {
+                    enhanced.age = 'Thanh niên (20-30 tuổi)';
+                } else if (story.includes('trung niên') || story.includes('người lớn')) {
+                    enhanced.age = 'Trung niên (35-50 tuổi)';
+                } else {
+                    // Default based on name characteristics
+                    if (name.includes('bà') || name.includes('ông')) {
+                        enhanced.age = 'Cao tuổi (50+ tuổi)';
+                    } else if (name.includes('chú') || name.includes('cô')) {
+                        enhanced.age = 'Trung niên (35-45 tuổi)';
+                    } else if (name.includes('anh') || name.includes('chị')) {
+                        enhanced.age = 'Thanh niên (25-35 tuổi)';
+                    } else {
+                        enhanced.age = 'Trưởng thành (25-40 tuổi)';
+                    }
+                }
+            }
+        }
+        
+        // Enhance appearance field
+        if (!enhanced.appearance || enhanced.appearance.trim() === '') {
+            // Generate detailed appearance based on available info and context
+            const name = enhanced.name.toLowerCase();
+            const story = storyText.toLowerCase();
+            
+            // Base gender description
+            const genderDesc = enhanced.gender === 'Nam' ? 'một người đàn ông' : 
+                              enhanced.gender === 'Nữ' ? 'một người đàn bà' : 'một người';
+            
+            // Age-based appearance traits
+            let ageAppearance = '';
+            if (enhanced.age.includes('Cao tuổi') || enhanced.age.includes('60+')) {
+                ageAppearance = 'có mái tóc bạc, gương mặt có nếp nhăn thể hiện kinh nghiệm sống';
+            } else if (enhanced.age.includes('Trẻ') || enhanced.age.includes('15-20')) {
+                ageAppearance = 'có gương mặt trẻ trung, ánh mắt tươi sáng và năng động';
+            } else if (enhanced.age.includes('Thanh niên') || enhanced.age.includes('20-30')) {
+                ageAppearance = 'có vóc dáng khỏe mạnh, gương mặt đầy nghị lực';
+            } else if (enhanced.age.includes('Trung niên')) {
+                ageAppearance = 'có phong thái điềm đạm, ánh mắt sâu sắc và trưởng thành';
+            } else {
+                ageAppearance = 'có diện mạo cân đối, thể hiện sự trưởng thành';
+            }
+            
+            // Try to extract appearance details from story context
+            let contextAppearance = '';
+            const appearanceKeywords = ['đẹp', 'xấu', 'cao', 'thấp', 'gầy', 'mập', 'mạnh mẽ', 'yếu ớt', 'xinh đẹp', 'quyến rũ'];
+            const foundKeywords = appearanceKeywords.filter(keyword => story.includes(keyword));
+            if (foundKeywords.length > 0) {
+                contextAppearance = `, có vẻ ${foundKeywords.slice(0, 2).join(' và ')}`;
+            }
+            
+            // Clothing/style context
+            let styleDesc = '';
+            if (story.includes('áo dài') || story.includes('truyền thống')) {
+                styleDesc = ', mặc trang phục truyền thống';
+            } else if (story.includes('hiện đại') || story.includes('thời trang')) {
+                styleDesc = ', mặc trang phục hiện đại';
+            } else if (story.includes('võ sư') || story.includes('chiến đấu')) {
+                styleDesc = ', mặc trang phục thể hiện khả năng võ thuật';
+            } else {
+                styleDesc = ', ăn mặc gọn gàng';
+            }
+            
+            enhanced.appearance = `${genderDesc} ${ageAppearance}${contextAppearance}${styleDesc}.`;
+        }
+        
+        // Enhance description field
+        if (!enhanced.description || enhanced.description.trim() === '') {
+            // Try to extract description from story context
+            const nameRegex = new RegExp(`${enhanced.name}[^.]*?([^.]{20,100}[.!?])`, 'i');
+            const contextMatch = storyText.match(nameRegex);
+            if (contextMatch) {
+                enhanced.description = contextMatch[1].trim();
+            } else {
+                enhanced.description = `${enhanced.name} là một NPC xuất hiện trong câu chuyện.`;
+            }
+        }
+        
+        // Enhance relationship field and convert to Vietnamese
+        if (!enhanced.relationship || enhanced.relationship === 'unknown' || enhanced.relationship.trim() === '') {
+            // Try to infer relationship from story context
+            const name = enhanced.name.toLowerCase();
+            const story = storyText.toLowerCase();
+            
+            if (story.includes(`bạn ${name}`) || story.includes(`${name} bạn`)) {
+                enhanced.relationship = 'Bạn bè';
+            } else if (story.includes(`thù ${name}`) || story.includes(`kẻ thù`) || story.includes(`địch`)) {
+                enhanced.relationship = 'Thù địch';
+            } else if (story.includes(`đồng minh`) || story.includes(`liên minh`)) {
+                enhanced.relationship = 'Đồng minh';
+            } else if (story.includes(`gia đình`) || story.includes(`anh em`) || story.includes(`chị em`)) {
+                enhanced.relationship = 'Gia đình';
+            } else {
+                enhanced.relationship = 'Trung lập';
+            }
+        } else {
+            // Convert English relationship values to Vietnamese
+            const relationshipMap: { [key: string]: string } = {
+                'friend': 'Bạn bè',
+                'neutral': 'Trung lập',
+                'ally': 'Đồng minh', 
+                'enemy': 'Thù địch',
+                'love': 'Tình yêu',
+                'family': 'Gia đình',
+                'unknown': 'Chưa rõ',
+                'neutral_positive_curiosity': 'Tò mò tích cực'
+            };
+            
+            const lowerRelation = enhanced.relationship.toLowerCase();
+            if (relationshipMap[lowerRelation]) {
+                enhanced.relationship = relationshipMap[lowerRelation];
+            } else if (enhanced.relationship.includes('neutral') && enhanced.relationship.includes('positive')) {
+                enhanced.relationship = 'Tò mò tích cực';
+            } else if (enhanced.relationship.includes('curiosity')) {
+                enhanced.relationship = 'Tò mò';
+            }
+        }
+        
+        // Enhance inner_thoughts field (most important)
+        if (!enhanced.inner_thoughts || enhanced.inner_thoughts.trim() === '') {
+            // Generate thoughtful inner thoughts based on context
+            const thoughtTemplates = [
+                `"Không biết ${enhanced.name} đang nghĩ gì về tình huống này."`,
+                `"${enhanced.name} có vẻ đang quan sát và cân nhắc."`,
+                `"Có lẽ ${enhanced.name} đang có những suy nghĩ riêng về chuyện này."`,
+                `"${enhanced.name} dường như đang theo dõi diễn biến của sự việc."`,
+                `"Ánh mắt của ${enhanced.name} cho thấy họ đang suy tính điều gì đó."`
+            ];
+            
+            // Try to create context-aware inner thoughts
+            const story = storyText.toLowerCase();
+            if (story.includes('chiến đấu') || story.includes('đánh nhau')) {
+                enhanced.inner_thoughts = `"${enhanced.name} có vẻ căng thẳng và sẵn sàng cho cuộc chiến."`;
+            } else if (story.includes('nói chuyện') || story.includes('trò chuyện')) {
+                enhanced.inner_thoughts = `"${enhanced.name} dường như quan tâm đến cuộc hội thoại này."`;
+            } else if (story.includes('mua bán') || story.includes('giao dịch')) {
+                enhanced.inner_thoughts = `"${enhanced.name} đang tính toán lợi ích trong giao dịch này."`;
+            } else {
+                // Use a random template
+                const randomTemplate = thoughtTemplates[Math.floor(Math.random() * thoughtTemplates.length)];
+                enhanced.inner_thoughts = randomTemplate;
+            }
+        }
+        
+        return enhanced;
+    });
+};
 
 export interface GameActionHandlersParams {
     ai: GoogleGenAI | null;
@@ -760,10 +963,11 @@ Hãy gợi ý hành động:`;
             const newChoices = jsonResponse.choices || [];
             setChoices(newChoices);
             
-            // Extract and set NPCs present data
-            const npcsPresent = jsonResponse.npcs_present || [];
-            console.log('🤖 NPCs detected from AI response:', npcsPresent.length > 0 ? npcsPresent : 'No NPCs present');
-            setNPCsPresent(npcsPresent);
+            // Extract and enhance NPCs present data
+            const rawNPCsPresent = jsonResponse.npcs_present || [];
+            const enhancedNPCs = enhanceNPCData(rawNPCsPresent, cleanStory);
+            console.log('🤖 NPCs detected from AI response:', enhancedNPCs.length > 0 ? enhancedNPCs : 'No NPCs present');
+            setNPCsPresent(enhancedNPCs);
             
             // Track generated choices in history
             if (newChoices.length > 0) {

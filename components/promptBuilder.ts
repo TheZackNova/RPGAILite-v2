@@ -1201,6 +1201,12 @@ Tự hỏi bản thân:
   * NẾU TRÊN 500 từ: Rút gọn một chút nhưng giữ nội dung chính
   * KIỂM TRA LẠI: Đảm bảo 400-500 từ chính xác
 
+**QUAN TRỌNG VỀ NPCs_PRESENT**: 
+- PHẢI điền đầy đủ TẤT CẢ các field cho mỗi NPC: name, gender, age, appearance, description, relationship, inner_thoughts
+- KHÔNG được để trống hoặc "Không rõ" trừ khi thực sự không thể xác định
+- Mô tả appearance và description phải chi tiết (ít nhất 10-15 từ mỗi field)
+- Inner thoughts phải phản ánh tâm trạng NPC trong tình huống cụ thể này
+
 **CUỐI CÙNG**: Tạo JSON response với tất cả suy nghĩ trên trong field "cot_reasoning":
 
 {
@@ -1208,13 +1214,13 @@ Tự hỏi bản thân:
   "story": "...",
   "npcs_present": [
     {
-      "name": "Tên NPC",
-      "gender": "Nam/Nữ/Không rõ",
-      "age": "Tuổi hoặc 'Không rõ'",
-      "appearance": "Mô tả ngoại hình ngắn",
-      "description": "Mô tả ngắn về NPC",
-      "relationship": "friend/neutral/ally/enemy/love/family/unknown",
-      "inner_thoughts": "Nội tâm NPC về hành động player (15-25 từ)"
+      "name": "Tên đầy đủ của NPC (BẮT BUỘC - không được để trống)",
+      "gender": "Nam/Nữ/Không rõ (BẮT BUỘC - phải có giá trị cụ thể)",
+      "age": "Tuổi cụ thể (VD: '25 tuổi', 'Trung niên', 'Già') - KHÔNG được để trống",
+      "appearance": "Mô tả ngoại hình chi tiết (ít nhất 10-15 từ) - BẮT BUỘC điền",
+      "description": "Mô tả chi tiết về NPC, vai trò, tính cách (ít nhất 15-20 từ) - BẮT BUỘC",
+      "relationship": "Bạn bè/Trung lập/Đồng minh/Thù địch/Tình yêu/Gia đình/Chưa rõ - BẮT BUỘC chọn 1 (bằng tiếng Việt)",
+      "inner_thoughts": "Nội tâm NPC về tình huống hiện tại (15-25 từ) - BẮT BUỘC có nội dung"
     }
   ],
   "choices": [...]
@@ -1231,13 +1237,13 @@ Tự hỏi bản thân:
   "story": "...",
   "npcs_present": [
     {
-      "name": "Tên NPC", 
-      "gender": "Nam/Nữ/Không rõ",
-      "age": "Tuổi hoặc 'Không rõ'",
-      "appearance": "Mô tả ngoại hình", 
-      "description": "Mô tả về NPC",
-      "relationship": "friend/neutral/ally/enemy/love/family/unknown",
-      "inner_thoughts": "Nội tâm NPC (15-25 từ)"
+      "name": "Tên đầy đủ của NPC (BẮT BUỘC - không được để trống)", 
+      "gender": "Nam/Nữ/Không rõ (BẮT BUỘC - phải có giá trị cụ thể)",
+      "age": "Tuổi cụ thể (VD: '25 tuổi', 'Trung niên', 'Già') - KHÔNG được để trống",
+      "appearance": "Mô tả ngoại hình chi tiết (ít nhất 10-15 từ) - BẮT BUỘC điền", 
+      "description": "Mô tả chi tiết về NPC, vai trò, tính cách (ít nhất 15-20 từ) - BẮT BUỘC",
+      "relationship": "Bạn bè/Trung lập/Đồng minh/Thù địch/Tình yêu/Gia đình/Chưa rõ - BẮT BUỘC chọn 1 (bằng tiếng Việt)",
+      "inner_thoughts": "Nội tâm NPC về tình huống hiện tại (15-25 từ) - BẮT BUỘC có nội dung"
     }
   ],
   "choices": [...]
@@ -2065,13 +2071,13 @@ TUYỆT ĐỐI KHÔNG tự thêm động cơ/suy nghĩ/cảm xúc cho PC. CHỈ 
   "story": "...",
   "npcs_present": [
     {
-      "name": "Tên NPC",
-      "gender": "Nam/Nữ/Không rõ", 
-      "age": "Tuổi hoặc 'Không rõ'",
-      "appearance": "Mô tả ngoại hình",
-      "description": "Mô tả về NPC", 
-      "relationship": "friend/neutral/ally/enemy/love/family/unknown",
-      "inner_thoughts": "Nội tâm NPC (15-25 từ)"
+      "name": "Tên đầy đủ của NPC (BẮT BUỘC - không được để trống)",
+      "gender": "Nam/Nữ/Không rõ (BẮT BUỘC - phải có giá trị cụ thể)", 
+      "age": "Tuổi cụ thể (VD: '25 tuổi', 'Trung niên', 'Già') - KHÔNG được để trống",
+      "appearance": "Mô tả ngoại hình chi tiết (ít nhất 10-15 từ) - BẮT BUỘC điền",
+      "description": "Mô tả chi tiết về NPC, vai trò, tính cách (ít nhất 15-20 từ) - BẮT BUỘC", 
+      "relationship": "Bạn bè/Trung lập/Đồng minh/Thù địch/Tình yêu/Gia đình/Chưa rõ - BẮT BUỘC chọn 1 (bằng tiếng Việt)",
+      "inner_thoughts": "Nội tâm NPC về tình huống hiện tại (15-25 từ) - BẮT BUỘC có nội dung"
     }
   ],
   "choices": [...]

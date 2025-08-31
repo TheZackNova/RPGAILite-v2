@@ -6,6 +6,8 @@ export const CHANGELOG_DATA: ChangelogEntry[] = [
     version: '1.49.0',
     date: '2025-08-31',
     changes: [
+      { type: 'feature', text: 'Enhanced NPC Data Generation & Validation - Thêm comprehensive NPC enhancement system với intelligent field filling: relationship field auto-convert sang tiếng Việt, age inference từ context (Thanh niên/Trung niên/Cao tuổi), detailed appearance generation từ story context, và fallback descriptions. NPC hiện có đầy đủ thông tin trong EntityInfoModal và StatusPanel.' },
+      { type: 'improvement', text: 'AI Prompt Enhancement for NPCs - Cải thiện prompt template với "BẮT BUỘC" requirements cho tất cả NPC fields, minimum word counts cho appearance/description (10-15 từ), và explicit Vietnamese relationship values. AI giờ được hướng dẫn chi tiết hơn để generate complete NPC data.' },
       { type: 'feature', text: 'Enhanced Custom Rules Integration - Cải tiến logic custom rules trong generateInitialStory để AI sử dụng cả rules có "Active" VÀ "Always Active" được check (thay vì OR logic). Custom rules giờ tác động mạnh hơn vào câu chuyện khởi đầu với logic AND requirement.' },
       { type: 'feature', text: 'Lore Concept Generation Progress Display - Thêm loreConcepts prop vào InitializationProgress component để hiển thị real-time các lore concepts được tạo ra. Progress bar giờ show count và preview description (60 chars) của generated concepts với scrollable UI.' },
       { type: 'improvement', text: 'Re-enabled Lore Concept Generation - Khôi phục lore concept generation step trong startNewGame function (trước đây bị disable). Game initialization giờ tạo lore concepts từ active custom rules trước khi generate initial story, cung cấp context phong phú hơn cho AI.' },
