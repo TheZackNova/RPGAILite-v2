@@ -10,6 +10,23 @@ export const MobileChoicesModal: React.FC<{
 }> = ({ isOpen, onClose, choices, onAction, isHighTokenCooldown = false }) => {
     if (!isOpen) return null;
 
+    const normalizeChoiceText = (choice: unknown) => {
+        if (typeof choice === 'string') {
+            return choice;
+        }
+
+        if (typeof choice === 'number' || typeof choice === 'boolean') {
+            return String(choice);
+        }
+
+        if (choice && typeof choice === 'object') {
+            const candidate = (choice as Record<string, unknown>).text ?? (choice as Record<string, unknown>).label ?? (choice as Record<string, unknown>).choice;
+            return typeof candidate === 'string' ? candidate : '';
+        }
+
+        return '';
+    };
+
     return (
         <div className="md:hidden fixed inset-0 bg-black/60 z-[70] flex items-end" onClick={onClose}>
             <div
@@ -21,10 +38,13 @@ export const MobileChoicesModal: React.FC<{
                 <h3 className="text-lg font-semibold mb-3 text-cyan-600 dark:text-cyan-400 text-center">Lựa chọn hành động</h3>
                  <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-2">
                     {choices.map((choice, index) => (
+                        (() => {
+                            const choiceText = normalizeChoiceText(choice);
+                            return (
                         <button
                             key={index}
                             onClick={() => {
-                                onAction(choice);
+                                onAction(choiceText);
                                 onClose();
                             }}
                             disabled={isHighTokenCooldown}
@@ -34,8 +54,10 @@ export const MobileChoicesModal: React.FC<{
                                     : 'hover:bg-purple-600 dark:hover:bg-purple-600 hover:text-white'
                             }`}
                         >
-                             {choice.match(/^\d+\.\s/) ? choice : `${index + 1}. ${choice}`}
+                             {choiceText.match(/^\d+\.\s/) ? choiceText : `${index + 1}. ${choiceText}`}
                         </button>
+                            );
+                        })()
                     ))}
                     {choices.length > 4 && (
                         <div className="text-center py-2">

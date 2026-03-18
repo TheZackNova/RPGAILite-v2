@@ -21,7 +21,7 @@ export const CreateWorld: React.FC<{
     initCurrentStep: string;
     initSubStep: string;
 }> = ({ onBack, onStartGame, isInitializing, initProgress, initCurrentStep, initSubStep }) => {
-    const { ai, isAiReady, apiKeyError, selectedModel } = useContext(AIContext);
+    const { ai, isAiReady, apiKeyError, selectedModel, openAiBaseUrl, openAiApiKey } = useContext(AIContext);
     const [gameSettingsState] = useGameSettings();
     const { gameSettings } = gameSettingsState;
     const [formData, setFormData] = useState<FormData>({
@@ -68,6 +68,78 @@ export const CreateWorld: React.FC<{
     const rulesFileInputRef = useRef<HTMLInputElement>(null);
     const worldSetupFileInputRef = useRef<HTMLInputElement>(null);
     const worldInfoFileInputRef = useRef<HTMLInputElement>(null);
+    const hasOpenAiEndpoint = openAiBaseUrl.trim().length > 0;
+
+    const extractJsonObject = (rawText: string) => {
+        let cleanText = rawText.trim();
+
+        if (cleanText.startsWith('```')) {
+            const fencedMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+            if (fencedMatch) {
+                cleanText = fencedMatch[1].trim();
+            }
+        }
+
+        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+        return jsonMatch ? jsonMatch[0] : cleanText;
+    };
+
+    const callConfiguredAi = async (prompt: string, options?: { jsonMode?: boolean; schema?: any }) => {
+        if (hasOpenAiEndpoint) {
+            const baseUrl = openAiBaseUrl.trim().replace(/\/$/, '');
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (openAiApiKey.trim()) {
+                headers['Authorization'] = `Bearer ${openAiApiKey.trim()}`;
+            }
+
+            const body: Record<string, any> = {
+                model: selectedModel,
+                messages: [{ role: 'user', content: prompt }],
+            };
+
+            if (options?.jsonMode) {
+                body.response_format = { type: 'json_object' };
+            }
+
+            const response = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`OpenAI API HTTP ${response.status}: ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data.choices?.[0]?.message?.content?.trim() || '';
+        }
+
+        if (!ai) {
+            throw new Error('AI chưa sẵn sàng');
+        }
+
+        if (options?.jsonMode) {
+            const response = await ai.models.generateContent({
+                model: selectedModel,
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json',
+                    responseSchema: options.schema,
+                }
+            });
+
+            return response.text?.trim() || '';
+        }
+
+        const response = await ai.models.generateContent({
+            model: selectedModel,
+            contents: prompt,
+        });
+
+        return response.text?.trim() || '';
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -326,7 +398,7 @@ export const CreateWorld: React.FC<{
 
     // --- Suggestion Functions ---
     const handleGenreSuggestion = async () => {
-        if (!isAiReady || !ai) {
+        if (!isAiReady || (!ai && !hasOpenAiEndpoint)) {
             setSuggestionError(apiKeyError || "AI chưa sẵn sàng. Vui lòng kiểm tra thiết lập API Key.");
             return;
         }
@@ -338,11 +410,7 @@ export const CreateWorld: React.FC<{
         const prompt = 'Gợi ý 5 chủ đề/bối cảnh độc đáo cho game phiêu lưu văn bản, phong cách tiểu thuyết mạng. BẮT BUỘC 100% tiếng Việt, KHÔNG dùng tiếng Anh. Mỗi cái trên một dòng.';
         
         try {
-            const response = await ai.models.generateContent({
-                model: selectedModel,
-                contents: prompt,
-            });
-            const text = response.text.trim();
+            const text = await callConfiguredAi(prompt);
             const suggestions = text.split('\n').map(s => s.replace(/^[*-]\s*/, '').trim()).filter(Boolean);
             setGenreSuggestions(suggestions);
             setIsGenreModalOpen(true);
@@ -358,7 +426,7 @@ export const CreateWorld: React.FC<{
     };
 
     const handleWorldDetailSuggestion = async () => {
-        if (!isAiReady || !ai) {
+        if (!isAiReady || (!ai && !hasOpenAiEndpoint)) {
             setSuggestionError(apiKeyError || "AI chưa sẵn sàng. Vui lòng kiểm tra thiết lập API Key.");
             return;
         }
@@ -375,11 +443,7 @@ QUAN TRỌNG: BẮT BUỘC 100% tiếng Việt, TUYỆT ĐỐI KHÔNG dùng ti�
 Ví dụ: "Giang Hồ hiểm ác đầy rẫy anh hùng hảo hán và ma đầu tàn bạo, nơi công pháp và bí tịch quyết định tất cả, hệ thống cho phép bạn đoạt lấy nội lực, kinh nghiệm chiến đấu từ các cao thủ chính tà, khiến bạn phải ẩn mình giữa vô vàn ân oán giang hồ và lựa chọn giữa chính đạo giả tạo hay ma đạo tàn khốc."`;
         
         try {
-            const response = await ai.models.generateContent({
-                model: selectedModel,
-                contents: prompt,
-            });
-            const text = response.text.trim();
+            const text = await callConfiguredAi(prompt);
             setFormData(prev => ({ ...prev, worldDetail: text }));
         } catch (error: any) {
             console.error(`Error generating suggestion for world detail:`, error);
@@ -396,7 +460,7 @@ Ví dụ: "Giang Hồ hiểm ác đầy rẫy anh hùng hảo hán và ma đầu
     };
 
     const handleCharacterSuggestion = async () => {
-        if (!isAiReady || !ai) {
+        if (!isAiReady || (!ai && !hasOpenAiEndpoint)) {
             setSuggestionError(apiKeyError || "AI chưa sẵn sàng. Vui lòng kiểm tra thiết lập API Key.");
             return;
         }
@@ -430,16 +494,11 @@ QUAN TRỌNG: BẮT BUỘC sử dụng 100% tiếng Việt. TUYỆT ĐỐI KHÔN
         };
 
         try {
-            const response = await ai.models.generateContent({
-                model: selectedModel,
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: characterSuggestionSchema,
-                }
+            const responseText = await callConfiguredAi(prompt, {
+                jsonMode: true,
+                schema: characterSuggestionSchema,
             });
-            const responseText = response.text.trim();
-            const suggestions = JSON.parse(responseText);
+            const suggestions = JSON.parse(extractJsonObject(responseText));
             
             setFormData(prev => ({ 
                 ...prev, 

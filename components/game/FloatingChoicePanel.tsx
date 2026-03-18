@@ -137,10 +137,19 @@ export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
                     ) : (
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                             {choices.map((choice, index) => (
+                                (() => {
+                                    const choiceText = typeof choice === 'string'
+                                        ? choice
+                                        : typeof choice === 'number' || typeof choice === 'boolean'
+                                            ? String(choice)
+                                            : choice && typeof choice === 'object'
+                                                ? (((choice as Record<string, unknown>).text ?? (choice as Record<string, unknown>).label ?? (choice as Record<string, unknown>).choice) as string || '')
+                                                : '';
+                                    return (
                                 <button 
                                     key={index}
                                     onClick={() => {
-                                        handleAction(choice);
+                                        handleAction(choiceText);
                                         setIsChoicesExpanded(false);
                                     }}
                                     disabled={isHighTokenCooldown}
@@ -156,11 +165,13 @@ export const FloatingChoicePanel: React.FC<FloatingChoicePanelProps> = memo(({
                                         </div>
                                         <div className="flex-grow">
                                             <p className="text-white group-hover:text-cyan-100 transition-colors duration-300 text-sm font-medium">
-                                                {choice.match(/^\d+\.\s/) ? choice.replace(/^\d+\.\s/, '') : choice}
+                                                {choiceText.match(/^\d+\.\s/) ? choiceText.replace(/^\d+\.\s/, '') : choiceText}
                                             </p>
                                         </div>
                                     </div>
                                 </button>
+                                    );
+                                })()
                             ))}
                         </div>
                     )}

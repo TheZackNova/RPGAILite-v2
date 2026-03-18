@@ -269,6 +269,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
     } = params;
+    const hasOpenAiEndpoint = openAiBaseUrl.trim().length > 0;
 
     // Helper: call OpenAI-compatible endpoint
     // Returns { text, totalTokens } - totalTokens from usage data if endpoint supports it
@@ -329,7 +330,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         pcEntity: any,
         initialHistory: GameHistoryEntry[]
     ) => {
-        if (!ai) return;
+        if (!ai && !hasOpenAiEndpoint) return;
         setIsLoading(true);
         
         const finalPersonality = worldData.customPersonality || worldData.personalityFromList;
@@ -413,12 +414,14 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             const fullInitialHistory: GameHistoryEntry[] = [{ role: 'user', parts: [{ text: userPrompt }] }];
             
             let responseText = '';
+            let responseUsageMetadata: { totalTokenCount?: number } | null = null;
 
-            if (openAiBaseUrl.trim()) {
+            if (hasOpenAiEndpoint) {
                 // Use OpenAI compatible endpoint
                 const messages = toOpenAiMessages(fullInitialHistory, systemInstruction);
                 const result = await callOpenAiApi(messages);
                 responseText = result.text;
+                responseUsageMetadata = { totalTokenCount: result.totalTokens };
                 setCurrentTurnTokens(result.totalTokens);
                 setTotalTokens(prev => prev + result.totalTokens);
             } else {
@@ -439,6 +442,7 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                 });
                 
                 const turnTokens = response.usageMetadata?.totalTokenCount || 0;
+                responseUsageMetadata = response.usageMetadata || null;
                 setCurrentTurnTokens(turnTokens);
                 setTotalTokens(prev => prev + turnTokens);
                 responseText = response.text?.trim() || '';
@@ -446,17 +450,17 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             
             if (!responseText) {
                 console.error("📖 GenerateInitialStory: API returned empty response text", {
-                    responseMetadata: response.usageMetadata,
+                    responseMetadata: responseUsageMetadata,
                     model: selectedModel,
-                    responseObject: response
+                    provider: hasOpenAiEndpoint ? 'openai-compatible' : 'gemini'
                 });
                 
                 // Check for specific error conditions
                 let errorMessage = "Lỗi: AI không thể tạo câu chuyện khởi đầu.";
                 
-                if (response.usageMetadata?.totalTokenCount === 0) {
+                if (responseUsageMetadata?.totalTokenCount === 0) {
                     errorMessage += " Có thể do giới hạn token hoặc nội dung bị lọc.";
-                } else if (!response.usageMetadata) {
+                } else if (!responseUsageMetadata) {
                     errorMessage += " Có thể do lỗi kết nối mạng.";
                 }
                 
@@ -582,13 +586,15 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
         try {
             let responseText = '';
             let turnTokens = 0;
+            let responseUsageMetadata: { totalTokenCount?: number } | null = null;
 
-            if (openAiBaseUrl.trim()) {
+            if (hasOpenAiEndpoint) {
                 // Use OpenAI compatible endpoint
                 const messages = toOpenAiMessages(apiHistory, systemInstruction);
                 const result = await callOpenAiApi(messages);
                 responseText = result.text;
                 turnTokens = result.totalTokens;
+                responseUsageMetadata = { totalTokenCount: result.totalTokens };
                 setCurrentTurnTokens(turnTokens);
                 setTotalTokens(prev => prev + turnTokens);
             } else {
@@ -606,6 +612,7 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                     }
                 });
                 turnTokens = response.usageMetadata?.totalTokenCount || 0;
+                responseUsageMetadata = response.usageMetadata || null;
                 setCurrentTurnTokens(turnTokens);
                 setTotalTokens(prev => prev + turnTokens);
                 responseText = response.text?.trim() || '';
@@ -681,18 +688,18 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             
             if (!responseText) {
                 console.error("API returned empty response text in handleAction", {
-                    responseMetadata: response.usageMetadata,
+                    responseMetadata: responseUsageMetadata,
                     model: selectedModel,
                     action: originalAction,
-                    responseObject: response
+                    provider: hasOpenAiEndpoint ? 'openai-compatible' : 'gemini'
                 });
                 
                 // Check for specific error conditions
                 let errorMessage = "Lỗi: AI không trả về nội dung.";
                 
-                if (response.usageMetadata?.totalTokenCount === 0) {
+                if (responseUsageMetadata?.totalTokenCount === 0) {
                     errorMessage += " Có thể do giới hạn token hoặc nội dung bị lọc.";
-                } else if (!response.usageMetadata) {
+                } else if (!responseUsageMetadata) {
                     errorMessage += " Có thể do lỗi kết nối mạng.";
                 }
                 
@@ -835,7 +842,7 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
     };
 
     const handleSuggestAction = async (storyLog: string[], currentGameState?: SaveData) => {
-        if (!ai) return;
+        if (!ai && !hasOpenAiEndpoint) return;
         setIsLoading(true);
         try {
             // Get the last few story entries for better context
@@ -860,12 +867,18 @@ VÍ DỤ:
 
 Hãy gợi ý hành động:`;
 
-            const response = await ai.models.generateContent({
-                model: selectedModel,
-                contents: [{ role: 'user', parts: [{ text: suggestionPrompt }] }],
-            });
-            
-            const suggestedAction = response.text?.trim() || 'Không thể nhận gợi ý lúc này.';
+            let suggestedAction = 'Không thể nhận gợi ý lúc này.';
+
+            if (hasOpenAiEndpoint) {
+                const result = await callOpenAiApi([{ role: 'user', content: suggestionPrompt }]);
+                suggestedAction = result.text || suggestedAction;
+            } else {
+                const response = await ai!.models.generateContent({
+                    model: selectedModel,
+                    contents: [{ role: 'user', parts: [{ text: suggestionPrompt }] }],
+                });
+                suggestedAction = response.text?.trim() || suggestedAction;
+            }
             
             // Clean up the response to remove quotes and extra formatting
             const cleanAction = suggestedAction
@@ -880,6 +893,123 @@ Hãy gợi ý hành động:`;
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const parsePlainTextResponse = (rawText: string): { story: string; choices: string[] } | null => {
+        const normalizedText = rawText.replace(/\r\n/g, '\n').trim();
+        if (!normalizedText) {
+            return null;
+        }
+
+        const lines = normalizedText.split('\n');
+        const choices: string[] = [];
+        let firstChoiceIndex = -1;
+
+        for (let index = 0; index < lines.length; index++) {
+            const trimmedLine = lines[index].trim();
+            const choiceMatch = trimmedLine.match(/^\d+[.)]\s+(.+)$/);
+            if (choiceMatch) {
+                if (firstChoiceIndex === -1) {
+                    firstChoiceIndex = index;
+                }
+                choices.push(choiceMatch[1].trim());
+            } else if (firstChoiceIndex !== -1 && trimmedLine.length > 0) {
+                return null;
+            }
+        }
+
+        if (firstChoiceIndex === -1) {
+            return {
+                story: normalizedText,
+                choices: []
+            };
+        }
+
+        const story = lines.slice(0, firstChoiceIndex).join('\n').trim();
+        if (!story) {
+            return null;
+        }
+
+        return {
+            story,
+            choices
+        };
+    };
+
+    const normalizeChoices = (rawChoices: unknown): string[] => {
+        if (!Array.isArray(rawChoices)) {
+            return [];
+        }
+
+        return rawChoices
+            .map(choice => {
+                if (typeof choice === 'string') {
+                    return choice.trim();
+                }
+
+                if (typeof choice === 'number' || typeof choice === 'boolean') {
+                    return String(choice).trim();
+                }
+
+                if (choice && typeof choice === 'object') {
+                    const choiceObject = choice as Record<string, unknown>;
+                    const candidate = choiceObject.text ?? choiceObject.label ?? choiceObject.choice ?? choiceObject.content;
+                    return typeof candidate === 'string' ? candidate.trim() : '';
+                }
+
+                return '';
+            })
+            .filter(choice => choice.length > 0);
+    };
+
+    const extractJsonPayload = (rawText: string): string | null => {
+        const trimmedText = rawText.trim();
+        if (!trimmedText) {
+            return null;
+        }
+
+        if (trimmedText.startsWith('```json')) {
+            const jsonMatch = trimmedText.match(/```json\s*([\s\S]*?)\s*```/i);
+            if (jsonMatch) {
+                return jsonMatch[1].trim();
+            }
+        } else if (trimmedText.startsWith('```')) {
+            const fencedMatch = trimmedText.match(/```\s*([\s\S]*?)\s*```/);
+            if (fencedMatch) {
+                return fencedMatch[1].trim();
+            }
+        }
+
+        const jsonMatch = trimmedText.match(/\{[\s\S]*\}/);
+        return jsonMatch ? jsonMatch[0] : null;
+    };
+
+    const parseResponseContent = (rawText: string): { story: string; choices: string[]; cot_reasoning?: string; npcs_present?: NPCPresent[] } | null => {
+        const jsonPayload = extractJsonPayload(rawText);
+        if (jsonPayload) {
+            try {
+                const parsed = JSON.parse(jsonPayload);
+                return {
+                    story: parsed.story || '',
+                    choices: normalizeChoices(parsed.choices),
+                    cot_reasoning: typeof parsed.cot_reasoning === 'string' ? parsed.cot_reasoning : undefined,
+                    npcs_present: Array.isArray(parsed.npcs_present) ? parsed.npcs_present : []
+                };
+            } catch (error) {
+                console.warn('Could not parse JSON payload in parseResponseContent, falling back to plain text.', error);
+            }
+        }
+
+        const plainText = parsePlainTextResponse(rawText);
+        if (!plainText) {
+            return null;
+        }
+
+        return {
+            story: plainText.story,
+            choices: plainText.choices,
+            npcs_present: []
+        };
     };
 
     const parseApiResponseHandler = (text: string) => {
@@ -914,10 +1044,41 @@ Hãy gợi ý hành động:`;
                 }
             }
             
+            const plainTextResponse = parsePlainTextResponse(cleanText);
+
             // Extract JSON for parsing
             const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 cleanText = jsonMatch[0];
+            } else if (plainTextResponse) {
+                console.warn("Response is not JSON. Falling back to plain text parser.");
+                let cleanStory = parseStoryAndTags(plainTextResponse.story, true);
+
+                cleanStory = regexEngine.processText(
+                    cleanStory,
+                    RegexPlacement.AI_OUTPUT,
+                    regexRules || [],
+                    {
+                        depth: gameHistory?.length || 0,
+                        isEdit: false,
+                        isPrompt: false
+                    }
+                );
+
+                storyLogManager.update(prev => [...prev, cleanStory]);
+                const normalizedChoices = normalizeChoices(plainTextResponse.choices);
+                setChoices(normalizedChoices);
+                setNPCsPresent([]);
+
+                if (normalizedChoices.length > 0) {
+                    const briefContext = cleanStory.length > 100 ?
+                        cleanStory.substring(0, 100) + '...' :
+                        cleanStory;
+                    updateChoiceHistory(normalizedChoices, undefined, briefContext);
+                }
+
+                triggerHighTokenCooldown();
+                return;
             }
             
             // Final check if cleanText is valid before parsing
@@ -930,10 +1091,9 @@ Hãy gợi ý hành động:`;
             
             // Enhanced JSON parsing with error handling for unterminated strings
             let jsonResponse;
+            let fixedText = cleanText;
             try {
                 // First, try to fix common JSON issues
-                let fixedText = cleanText;
-                
                 // Fix trailing commas
                 fixedText = fixedText.replace(/,(\s*[}\]])/g, '$1');
                 
@@ -971,6 +1131,11 @@ Hãy gợi ý hành động:`;
                 console.error("Failed JSON text (first 500 chars):", fixedText.substring(0, 500));
                 console.error("Character at error position:", fixedText.charAt(parseError.message.match(/position (\d+)/)?.[1] || 0));
                 console.log("Attempting to salvage response...");
+
+                const salvagedPlainText = parsePlainTextResponse(text);
+                if (salvagedPlainText) {
+                    jsonResponse = salvagedPlainText;
+                } else {
                 
                 // Try to extract story and choices manually if JSON parsing fails
                 try {
@@ -1000,6 +1165,7 @@ Hãy gợi ý hành động:`;
                     storyLogManager.update(prev => [...prev, `Lỗi: Không thể phân tích phản hồi AI. Chi tiết: ${parseError.message}`]);
                     setChoices([]);
                     return;
+                }
                 }
             }
             
@@ -1048,7 +1214,7 @@ Hãy gợi ý hành động:`;
             );
             
             storyLogManager.update(prev => [...prev, cleanStory]);
-            const newChoices = jsonResponse.choices || [];
+            const newChoices = normalizeChoices(jsonResponse.choices);
             setChoices(newChoices);
             
             // Extract and enhance NPCs present data
@@ -1078,7 +1244,10 @@ Hãy gợi ý hành động:`;
     // Helper method to detect duplicate responses
     const detectDuplicateResponse = (responseText: string, gameHistory: GameHistoryEntry[]): boolean => {
         try {
-            const currentResponse = JSON.parse(responseText);
+            const currentResponse = parseResponseContent(responseText);
+            if (!currentResponse || !currentResponse.story) {
+                return false;
+            }
             const currentStory = currentResponse.story || '';
             const currentChoices = (currentResponse.choices || []).join('|');
             
@@ -1090,7 +1259,10 @@ Hãy gợi ý hành động:`;
             
             for (const pastResponse of recentModelResponses) {
                 try {
-                    const pastParsed = JSON.parse(pastResponse.parts[0].text);
+                    const pastParsed = parseResponseContent(pastResponse.parts[0].text);
+                    if (!pastParsed || !pastParsed.story) {
+                        continue;
+                    }
                     const pastStory = pastParsed.story || '';
                     const pastChoices = (pastParsed.choices || []).join('|');
                     
@@ -1322,18 +1494,24 @@ Hãy gợi ý hành động:`;
 
             // First, check for cot_reasoning JSON field (highest priority)
             try {
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const jsonResponse = JSON.parse(jsonMatch[0]);
-                    if (jsonResponse.cot_reasoning) {
-                        console.log('✅ Found cot_reasoning field with content:', jsonResponse.cot_reasoning.substring(0, 200) + '...');
-                        return {
-                            type: 'cot_reasoning_field',
-                            reasoning: jsonResponse.cot_reasoning,
-                            cotReasoningField: jsonResponse.cot_reasoning,
-                            note: 'COT reasoning found in cot_reasoning JSON field'
-                        };
-                    }
+                const parsedResponse = parseResponseContent(responseText);
+                if (parsedResponse?.cot_reasoning) {
+                    console.log('✅ Found cot_reasoning field with content:', parsedResponse.cot_reasoning.substring(0, 200) + '...');
+                    return {
+                        type: 'cot_reasoning_field',
+                        reasoning: parsedResponse.cot_reasoning,
+                        cotReasoningField: parsedResponse.cot_reasoning,
+                        note: 'COT reasoning found in cot_reasoning JSON field'
+                    };
+                }
+
+                if (parsedResponse && !extractJsonPayload(responseText)) {
+                    return {
+                        type: 'plain_text_response',
+                        reasoning: null,
+                        responsePreview: parsedResponse.story.substring(0, 200) + '...',
+                        note: 'Plain text response detected without explicit COT structure'
+                    };
                 }
             } catch (e) {
                 // JSON parsing failed, continue with other patterns
@@ -1377,20 +1555,16 @@ Hãy gợi ý hành động:`;
                 }
 
                 // Try to parse JSON and look for reasoning in story field
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
+                const parsedResponse = parseResponseContent(responseText);
+                if (parsedResponse?.story) {
                     try {
-                        const parsed = JSON.parse(jsonMatch[0]);
-                        if (parsed.story) {
-                            // Check if story contains reasoning markers
-                            const storyText = parsed.story;
-                            if (/BƯỚC|SUY NGHĨ|PHÂN TÍCH|tôi thấy|kế hoạch/i.test(storyText)) {
-                                return {
-                                    type: 'embedded_in_story',
-                                    reasoning: storyText, // Show full story content with reasoning
-                                    note: 'COT reasoning found embedded in story content'
-                                };
-                            }
+                        const storyText = parsedResponse.story;
+                        if (/BƯỚC|SUY NGHĨ|PHÂN TÍCH|tôi thấy|kế hoạch/i.test(storyText)) {
+                            return {
+                                type: 'embedded_in_story',
+                                reasoning: storyText,
+                                note: 'COT reasoning found embedded in story content'
+                            };
                         }
                     } catch (e) {
                         console.log('🔍 COT: Could not parse JSON for reasoning extraction');

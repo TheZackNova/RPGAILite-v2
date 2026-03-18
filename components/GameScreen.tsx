@@ -64,11 +64,6 @@ export const GameScreen: React.FC<{
     // Rule change tracking
     const [ruleChanges, setRuleChanges] = useState<{ activated: CustomRule[], deactivated: CustomRule[], updated: { oldRule: CustomRule, newRule: CustomRule }[] } | null>(null);
 
-    // High token usage cooldown state
-    const [isHighTokenCooldown, setIsHighTokenCooldown] = useState<boolean>(false);
-    const [cooldownEndTime, setCooldownEndTime] = useState<number>(0);
-    const [cooldownTimeLeft, setCooldownTimeLeft] = useState<number>(0);
-
     // --- Data Rehydration Logic ---
     const { rehydratedLog, rehydratedChoices } = useMemo(() => {
         // Priority 1: Use directly saved log and choices if they exist (new save format)
@@ -229,20 +224,13 @@ export const GameScreen: React.FC<{
         };
     }, [gameSettings.enableCOT]);
 
-    // Function to trigger high token usage cooldown
+    // Warn about high token usage without locking player input
     const triggerHighTokenCooldown = useCallback(() => {
         if (currentTurnTokens > 120000) {
-            const cooldownDuration = 60 * 1000; // 1 minute in milliseconds
-            const endTime = Date.now() + cooldownDuration;
+            console.log(`🕐 High token usage detected (${currentTurnTokens.toLocaleString()} tokens). Input remains available.`);
             
-            setIsHighTokenCooldown(true);
-            setCooldownEndTime(endTime);
-            setCooldownTimeLeft(60);
-            
-            console.log(`🕐 High token usage detected (${currentTurnTokens.toLocaleString()} tokens). Starting 60-second cooldown.`);
-            
-            // Show notification
-            setNotification(`⚠️ Sử dụng token cao (${Math.round(currentTurnTokens / 1000)}k). Chờ 60 giây trước khi thực hiện hành động tiếp theo.`);
+            // Show notification only
+            setNotification(`⚠️ Sử dụng token cao (${Math.round(currentTurnTokens / 1000)}k). Tiếp tục gửi input có thể làm tăng thời gian phản hồi.`);
             setTimeout(() => setNotification(null), 5000);
         }
     }, [currentTurnTokens, setNotification]);
@@ -352,30 +340,6 @@ export const GameScreen: React.FC<{
             setIsLoading(false);
         }
     }, [isAiReady, hasGeneratedInitialStory, generateInitialStory, gameHistory.length, storyLog.length, apiKeyError]); 
-
-    // High token usage cooldown timer effect
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        
-        if (isHighTokenCooldown && cooldownEndTime > 0) {
-            timer = setInterval(() => {
-                const now = Date.now();
-                const timeLeft = Math.max(0, Math.ceil((cooldownEndTime - now) / 1000));
-                setCooldownTimeLeft(timeLeft);
-                
-                if (timeLeft <= 0) {
-                    setIsHighTokenCooldown(false);
-                    setCooldownEndTime(0);
-                    setCooldownTimeLeft(0);
-                    console.log('🕐 High token cooldown ended');
-                }
-            }, 1000);
-        }
-        
-        return () => {
-            if (timer) clearInterval(timer);
-        };
-    }, [isHighTokenCooldown, cooldownEndTime]);
 
     // Automatic cleanup and history management effect
     useEffect(() => {
@@ -599,12 +563,12 @@ export const GameScreen: React.FC<{
         }
     }, [parseStoryAndTags]);
     const handleAction = useCallback(async (action: string) => {
-        if (isLoading || (!ai && !openAiBaseUrl.trim()) || isHighTokenCooldown) return;
+        if (isLoading || (!ai && !openAiBaseUrl.trim())) return;
         const currentGameState: SaveData = {
             worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, compressedHistory
         };
         await gameActionHandlers.handleAction(action, currentGameState);
-    }, [gameActionHandlers, isLoading, ai, openAiBaseUrl, isHighTokenCooldown, worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, compressedHistory]);
+    }, [gameActionHandlers, isLoading, ai, openAiBaseUrl, worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, compressedHistory]);
 
     const debouncedHandleAction = useDebouncedCallback((action: string) => {
         handleAction(action);
@@ -1254,8 +1218,8 @@ export const GameScreen: React.FC<{
                     setCustomAction={setCustomAction}
                     handleSuggestAction={handleSuggestAction}
                     isCustomActionLocked={isCustomActionLocked}
-                    isHighTokenCooldown={isHighTokenCooldown}
-                    cooldownTimeLeft={cooldownTimeLeft}
+                    isHighTokenCooldown={false}
+                    cooldownTimeLeft={0}
                 />
             </div>
 
@@ -1298,8 +1262,8 @@ export const GameScreen: React.FC<{
                     setCustomAction={setCustomAction}
                     handleSuggestAction={handleSuggestAction}
                     isCustomActionLocked={isCustomActionLocked}
-                    isHighTokenCooldown={isHighTokenCooldown}
-                    cooldownTimeLeft={cooldownTimeLeft}
+                    isHighTokenCooldown={false}
+                    cooldownTimeLeft={0}
                     className="md:right-[42%]"
                 />
             </div>
@@ -1316,8 +1280,8 @@ export const GameScreen: React.FC<{
                 isLoading={isLoading}
                 isAiReady={isAiReady}
                 isCustomActionLocked={isCustomActionLocked}
-                isHighTokenCooldown={isHighTokenCooldown}
-                cooldownTimeLeft={cooldownTimeLeft}
+                isHighTokenCooldown={false}
+                cooldownTimeLeft={0}
             />
 
             {/* Render MemoizedModals with error boundary protection */}
@@ -1398,7 +1362,7 @@ export const GameScreen: React.FC<{
                             locationDiscoveryOrder={locationDiscoveryOrder || []}
                             worldData={worldData || {}}
                             entityComputations={entityComputations || { pcEntity: undefined, pcStatuses: [], displayParty: [], playerInventory: [] }}
-                            isHighTokenCooldown={isHighTokenCooldown}
+                            isHighTokenCooldown={false}
                         />
                     );
                 } catch (error) {

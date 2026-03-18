@@ -31,6 +31,23 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
     isHighTokenCooldown = false,
     cooldownTimeLeft = 0,
 }) => {
+    const normalizeChoiceText = (choice: unknown) => {
+        if (typeof choice === 'string') {
+            return choice;
+        }
+
+        if (typeof choice === 'number' || typeof choice === 'boolean') {
+            return String(choice);
+        }
+
+        if (choice && typeof choice === 'object') {
+            const candidate = (choice as Record<string, unknown>).text ?? (choice as Record<string, unknown>).label ?? (choice as Record<string, unknown>).choice;
+            return typeof candidate === 'string' ? candidate : '';
+        }
+
+        return '';
+    };
+
     // Local state for input to prevent lag
     const [localCustomAction, setLocalCustomAction] = useState(customAction);
     // IME composition state for Vietnamese input
@@ -136,7 +153,7 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
                             {choices.map((choice, index) => (
                                 <button 
                                     key={index}
-                                    onClick={() => handleAction(choice)}
+                                    onClick={() => handleAction(normalizeChoiceText(choice))}
                                     disabled={isHighTokenCooldown}
                                     className={`group w-full text-left p-4 bg-white/5 backdrop-blur-sm border border-white/20 rounded-2xl transition-all duration-300 shadow-lg ${
                                         isHighTokenCooldown 
@@ -149,9 +166,14 @@ export const ActionPanel: React.FC<ActionPanelProps> = ({
                                             {index + 1}
                                         </div>
                                         <div className="flex-grow">
+                                            {(() => {
+                                                const choiceText = normalizeChoiceText(choice);
+                                                return (
                                             <p className="text-white/90 group-hover:text-white transition-colors duration-300">
-                                                {choice.match(/^\d+\.\s/) ? choice.replace(/^\d+\.\s/, '') : choice}
+                                                {choiceText.match(/^\d+\.\s/) ? choiceText.replace(/^\d+\.\s/, '') : choiceText}
                                             </p>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </button>
