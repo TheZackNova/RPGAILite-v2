@@ -428,6 +428,12 @@ export default function App() {
   const [aiTopP, setAiTopP] = useState(() => {
       return parseFloat(localStorage.getItem('aiTopP') || '0.95');
   });
+  const [openAiBaseUrl, setOpenAiBaseUrl] = useState<string>(() => {
+      return localStorage.getItem('openai_base_url') || '';
+  });
+  const [openAiApiKey, setOpenAiApiKey] = useState<string>(() => {
+      return localStorage.getItem('openai_api_key') || '';
+  });
 
   // --- Thể hiện AI được memoized ---
   const activeKey = useMemo(() => {
@@ -482,6 +488,14 @@ export default function App() {
       localStorage.setItem('aiTemperature', settings.temperature.toString());
       localStorage.setItem('aiTopK', settings.topK.toString());
       localStorage.setItem('aiTopP', settings.topP.toString());
+  };
+
+  const handleOpenAiSettingsSave = (baseUrl: string, apiKey: string) => {
+      setOpenAiBaseUrl(baseUrl);
+      setOpenAiApiKey(apiKey);
+      localStorage.setItem('openai_base_url', baseUrl);
+      localStorage.setItem('openai_api_key', apiKey);
+      console.debug('[App] OpenAI settings saved. url:', baseUrl, 'hasKey:', !!apiKey);
   };
 
   const handleRotateKey = () => {
@@ -1000,6 +1014,9 @@ Mô tả ngoại hình phải phù hợp với bối cảnh và tính cách, t�
           topK={aiTopK}
           topP={aiTopP}
           onAiSettingsChange={handleAiSettingsChange}
+          openAiBaseUrl={openAiBaseUrl}
+          openAiApiKey={openAiApiKey}
+          onOpenAiSettingsSave={handleOpenAiSettingsSave}
         />
         <ChangelogModal
             isOpen={isChangelogModalOpen}
