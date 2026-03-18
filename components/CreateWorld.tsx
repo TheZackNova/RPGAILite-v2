@@ -12,6 +12,7 @@ import {
 } from './Icons.tsx';
 import { useGameSettings } from './hooks/useGameSettings';
 import { getThemeColors } from './utils/themeUtils';
+import { parseOpenAiCompatibleResponse } from './utils/openAiCompatibleResponse.ts';
 
 export const CreateWorld: React.FC<{ 
     onBack: () => void; 
@@ -95,6 +96,7 @@ export const CreateWorld: React.FC<{
             const body: Record<string, any> = {
                 model: selectedModel,
                 messages: [{ role: 'user', content: prompt }],
+                stream: true,
             };
 
             if (options?.jsonMode) {
@@ -112,8 +114,8 @@ export const CreateWorld: React.FC<{
                 throw new Error(`OpenAI API HTTP ${response.status}: ${errorText}`);
             }
 
-            const data = await response.json();
-            return data.choices?.[0]?.message?.content?.trim() || '';
+            const data = await parseOpenAiCompatibleResponse(response);
+            return data.text;
         }
 
         if (!ai) {

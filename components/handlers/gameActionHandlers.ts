@@ -3,6 +3,7 @@ import type { GameHistoryEntry, SaveData, RegexRule, NPCPresent } from '../types
 import { buildEnhancedRagPrompt } from '../promptBuilder';
 import { createAutoTrimmedStoryLog } from '../utils/storyLogUtils';
 import { regexEngine, RegexPlacement } from '../utils/RegexEngine';
+import { parseOpenAiCompatibleResponse } from '../utils/openAiCompatibleResponse';
 
 /**
  * Enhances NPC data by filling missing fields with intelligent defaults
@@ -289,6 +290,7 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
             messages,
             temperature: tempOverride !== undefined ? tempOverride : temperature,
             top_p: topPOverride !== undefined ? topPOverride : topP,
+            stream: true,
             // response_format is widely supported (OpenAI, LM Studio, OpenRouter, most Ollama builds)
             // but may be ignored silently by endpoints that don't support it
             response_format: { type: 'json_object' },
@@ -299,10 +301,9 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
             const errText = await response.text();
             throw new Error(`OpenAI API HTTP ${response.status}: ${errText}`);
         }
-        const data = await response.json();
-        const text = data.choices?.[0]?.message?.content || '';
-        // Use token usage from response if available (most OpenAI-compatible endpoints return it)
-        const totalTokens = data.usage?.total_tokens || 0;
+        const data = await parseOpenAiCompatibleResponse(response);
+        const text = data.text;
+        const totalTokens = data.totalTokens;
         console.debug('[OpenAI API] Response received, length:', text.length, 'tokens:', totalTokens);
         return { text, totalTokens };
     };

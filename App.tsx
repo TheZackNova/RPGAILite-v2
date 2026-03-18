@@ -12,6 +12,7 @@ import { InitializationProgress } from './components/InitializationProgress.tsx'
 import type { SaveData, Entity, AIContextType, FormData, CustomRule, KnownEntities } from './components/types.ts';
 import { CHANGELOG_DATA } from './components/data/changelog.ts';
 import { ReferenceIdGenerator } from './components/utils/ReferenceIdGenerator.ts';
+import { parseOpenAiCompatibleResponse } from './components/utils/openAiCompatibleResponse.ts';
 
 // --- Hằng số ---
 export const DEFAULT_SYSTEM_INSTRUCTION = `BẠN LÀ QUẢN TRÒ (GM) AI. Nhiệm vụ: điều khiển trò chơi nhập vai văn bản, tuân thủ NGHIÊM NGẶT:
@@ -525,6 +526,7 @@ export default function App() {
           messages,
           temperature: aiTemperature,
           top_p: aiTopP,
+          stream: true,
       };
 
       if (jsonMode) {
@@ -543,8 +545,8 @@ export default function App() {
           throw new Error(`OpenAI API HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content?.trim() || '';
+      const data = await parseOpenAiCompatibleResponse(response);
+      return data.text;
   }, [openAiApiKey, openAiBaseUrl, selectedAiModel, aiTemperature, aiTopP]);
 
   const handleRotateKey = () => {
