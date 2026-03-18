@@ -315,6 +315,8 @@ export interface AIContextType {
     temperature: number;
     topK: number;
     topP: number;
+    openAiBaseUrl: string;
+    openAiApiKey: string;
 }
 
 // --- Regex System Types ---

@@ -222,6 +222,10 @@ export interface GameActionHandlersParams {
     topK: number;
     topP: number;
     
+    // OpenAI Compatible Endpoint
+    openAiBaseUrl: string;
+    openAiApiKey: string;
+    
     // Game Settings
     enableCOT: boolean;
     
@@ -259,11 +263,62 @@ export const createGameActionHandlers = (params: GameActionHandlersParams) => {
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
         temperature, topK, topP, enableCOT,
+        openAiBaseUrl, openAiApiKey,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
     } = params;
+
+    // Helper: call OpenAI-compatible endpoint
+    // Returns { text, totalTokens } - totalTokens from usage data if endpoint supports it
+    const callOpenAiApi = async (
+        messages: { role: string; content: string }[],
+        modelOverride?: string,
+        tempOverride?: number,
+        topPOverride?: number
+    ): Promise<{ text: string; totalTokens: number }> => {
+        const baseUrl = openAiBaseUrl.trim().replace(/\/$/, '');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (openAiApiKey.trim()) {
+            headers['Authorization'] = `Bearer ${openAiApiKey.trim()}`;
+        }
+        const body: Record<string, any> = {
+            model: modelOverride || selectedModel,
+            messages,
+            temperature: tempOverride !== undefined ? tempOverride : temperature,
+            top_p: topPOverride !== undefined ? topPOverride : topP,
+            // response_format is widely supported (OpenAI, LM Studio, OpenRouter, most Ollama builds)
+            // but may be ignored silently by endpoints that don't support it
+            response_format: { type: 'json_object' },
+        };
+        console.debug('[OpenAI API] Calling', baseUrl + '/chat/completions', 'model:', body.model);
+        const response = await fetch(`${baseUrl}/chat/completions`, { method: 'POST', headers, body: JSON.stringify(body) });
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`OpenAI API HTTP ${response.status}: ${errText}`);
+        }
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content || '';
+        // Use token usage from response if available (most OpenAI-compatible endpoints return it)
+        const totalTokens = data.usage?.total_tokens || 0;
+        console.debug('[OpenAI API] Response received, length:', text.length, 'tokens:', totalTokens);
+        return { text, totalTokens };
+    };
+
+    // Helper: convert Gemini-style history to OpenAI messages
+    const toOpenAiMessages = (history: GameHistoryEntry[], systemInstr: string): { role: string; content: string }[] => {
+        const messages: { role: string; content: string }[] = [];
+        if (systemInstr) {
+            messages.push({ role: 'system', content: systemInstr });
+        }
+        for (const entry of history) {
+            const role = entry.role === 'model' ? 'assistant' : 'user';
+            const content = entry.parts.map(p => p.text).join('');
+            messages.push({ role, content });
+        }
+        return messages;
+    };
 
     // Create auto-trimmed story log functions
     const storyLogManager = createAutoTrimmedStoryLog(setStoryLog);
@@ -357,27 +412,37 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             // Use full prompt for AI generation
             const fullInitialHistory: GameHistoryEntry[] = [{ role: 'user', parts: [{ text: userPrompt }] }];
             
-            const response = await ai.models.generateContent({
-                model: selectedModel, 
-                contents: fullInitialHistory,
-                config: { 
-                    systemInstruction: systemInstruction, 
-                    responseMimeType: "application/json", 
-                    responseSchema: responseSchema 
-                }
-            });
-            
-            console.log('📖 GenerateInitialStory: AI response received:', {
-                hasText: !!response.text,
-                textLength: response.text?.length || 0,
-                usageMetadata: response.usageMetadata
-            });
-            
-            const turnTokens = response.usageMetadata?.totalTokenCount || 0;
-            setCurrentTurnTokens(turnTokens);
-            setTotalTokens(prev => prev + turnTokens);
+            let responseText = '';
 
-            const responseText = response.text?.trim() || '';
+            if (openAiBaseUrl.trim()) {
+                // Use OpenAI compatible endpoint
+                const messages = toOpenAiMessages(fullInitialHistory, systemInstruction);
+                const result = await callOpenAiApi(messages);
+                responseText = result.text;
+                setCurrentTurnTokens(result.totalTokens);
+                setTotalTokens(prev => prev + result.totalTokens);
+            } else {
+                const response = await ai!.models.generateContent({
+                    model: selectedModel, 
+                    contents: fullInitialHistory,
+                    config: { 
+                        systemInstruction: systemInstruction, 
+                        responseMimeType: "application/json", 
+                        responseSchema: responseSchema 
+                    }
+                });
+                
+                console.log('📖 GenerateInitialStory: AI response received:', {
+                    hasText: !!response.text,
+                    textLength: response.text?.length || 0,
+                    usageMetadata: response.usageMetadata
+                });
+                
+                const turnTokens = response.usageMetadata?.totalTokenCount || 0;
+                setCurrentTurnTokens(turnTokens);
+                setTotalTokens(prev => prev + turnTokens);
+                responseText = response.text?.trim() || '';
+            }
             
             if (!responseText) {
                 console.error("📖 GenerateInitialStory: API returned empty response text", {
@@ -440,7 +505,7 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
             originalAction = originalAction.replace(nsfwRegex, '').trim();
         }
 
-        if (!originalAction || !ai) return;
+        if (!originalAction || (!ai && !openAiBaseUrl.trim())) return;
 
         // Process player input through regex rules
         const processedAction = regexEngine.processText(
@@ -515,24 +580,36 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
         const updatedHistory = [...gameHistory, optimizedUserEntry];
 
         try {
-            const response = await ai.models.generateContent({
-                model: selectedModel, 
-                contents: apiHistory, // Use full context for AI
-                config: { 
-                    systemInstruction: systemInstruction, 
-                    responseMimeType: "application/json", 
-                    responseSchema: responseSchema,
-                    // Use configured AI settings
-                    temperature: temperature,
-                    topP: topP,
-                    topK: topK
-                }
-            });
-            const turnTokens = response.usageMetadata?.totalTokenCount || 0;
-            setCurrentTurnTokens(turnTokens);
-            setTotalTokens(prev => prev + turnTokens);
+            let responseText = '';
+            let turnTokens = 0;
 
-            const responseText = response.text?.trim() || '';
+            if (openAiBaseUrl.trim()) {
+                // Use OpenAI compatible endpoint
+                const messages = toOpenAiMessages(apiHistory, systemInstruction);
+                const result = await callOpenAiApi(messages);
+                responseText = result.text;
+                turnTokens = result.totalTokens;
+                setCurrentTurnTokens(turnTokens);
+                setTotalTokens(prev => prev + turnTokens);
+            } else {
+                const response = await ai!.models.generateContent({
+                    model: selectedModel, 
+                    contents: apiHistory, // Use full context for AI
+                    config: { 
+                        systemInstruction: systemInstruction, 
+                        responseMimeType: "application/json", 
+                        responseSchema: responseSchema,
+                        // Use configured AI settings
+                        temperature: temperature,
+                        topP: topP,
+                        topK: topK
+                    }
+                });
+                turnTokens = response.usageMetadata?.totalTokenCount || 0;
+                setCurrentTurnTokens(turnTokens);
+                setTotalTokens(prev => prev + turnTokens);
+                responseText = response.text?.trim() || '';
+            }
             
             // DEBUG: Log response details 
             console.log(`📤 [Turn ${currentGameState.turnCount}] AI Response Debug:`, {
@@ -647,7 +724,13 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                     // Continue with current response to prevent infinite loop
                 } else {
                 
-                const retryResponse = await ai.models.generateContent({
+                let retryText = '';
+                if (openAiBaseUrl.trim()) {
+                    const retryMessages = toOpenAiMessages(retryHistory, systemInstruction);
+                    const retryResult = await callOpenAiApi(retryMessages, undefined, Math.min(temperature + 0.1, 2.0), Math.max(topP - 0.05, 0.1));
+                    retryText = retryResult.text;
+                } else {
+                const retryResponse = await ai!.models.generateContent({
                     model: selectedModel, 
                     contents: retryHistory,
                     config: { 
@@ -660,8 +743,8 @@ Hãy tạo một câu chuyện mở đầu cuốn hút${pcEntity.motivation ? ` 
                         topK: Math.max(topK - 10, 10)
                     }
                 });
-                
-                const retryText = retryResponse.text?.trim() || '';
+                retryText = retryResponse.text?.trim() || '';
+                }
                 if (retryText) {
                     setGameHistory(prev => [...prev, optimizedUserEntry, { role: 'model', parts: [{ text: retryText }] }]);
                     parseApiResponseHandler(retryText);

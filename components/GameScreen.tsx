@@ -55,7 +55,7 @@ export const GameScreen: React.FC<{
     keyRotationNotification: string | null;
     onClearNotification: () => void;
 }> = ({ initialGameState, onBackToMenu, keyRotationNotification, onClearNotification }) => {
-    const { ai, isAiReady, apiKeyError, rotateKey, isUsingDefaultKey, userApiKeyCount, selectedModel, temperature, topK, topP } = useContext(AIContext);
+    const { ai, isAiReady, apiKeyError, rotateKey, isUsingDefaultKey, userApiKeyCount, selectedModel, temperature, topK, topP, openAiBaseUrl, openAiApiKey } = useContext(AIContext);
     
     // Refs
     const isGeneratingRef = useRef<boolean>(false);
@@ -260,11 +260,12 @@ export const GameScreen: React.FC<{
         ai, selectedModel, systemInstruction, responseSchema,
         isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices,
         temperature, topK, topP, enableCOT: gameSettings.enableCOT,
+        openAiBaseUrl, openAiApiKey,
         setIsLoading, setChoices, setCustomAction, setStoryLog, setGameHistory,
         setTurnCount, setCurrentTurnTokens, setTotalTokens, setNPCsPresent,
         gameHistory, customRules, regexRules, ruleChanges, setRuleChanges, parseStoryAndTags,
         updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown
-    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, temperature, topK, topP, gameSettings.enableCOT, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
+    }), [ai, selectedModel, systemInstruction, responseSchema, isUsingDefaultKey, userApiKeyCount, rotateKey, rehydratedChoices, temperature, topK, topP, gameSettings.enableCOT, openAiBaseUrl, openAiApiKey, gameHistory, customRules, regexRules, ruleChanges, parseStoryAndTags, updateChoiceHistory, updateCOTResearchLog, triggerHighTokenCooldown, setNPCsPresent]);
 
     // Function to get current game state
     const getCurrentGameState = useCallback((): SaveData => {
@@ -598,12 +599,12 @@ export const GameScreen: React.FC<{
         }
     }, [parseStoryAndTags]);
     const handleAction = useCallback(async (action: string) => {
-        if (isLoading || !ai || isHighTokenCooldown) return;
+        if (isLoading || (!ai && !openAiBaseUrl.trim()) || isHighTokenCooldown) return;
         const currentGameState: SaveData = {
             worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, compressedHistory
         };
         await gameActionHandlers.handleAction(action, currentGameState);
-    }, [gameActionHandlers, isLoading, ai, isHighTokenCooldown, worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, compressedHistory]);
+    }, [gameActionHandlers, isLoading, ai, openAiBaseUrl, isHighTokenCooldown, worldData, knownEntities, statuses, quests, gameHistory, memories, party, customRules, systemInstruction, turnCount, totalTokens, gameTime, chronicle, compressedHistory]);
 
     const debouncedHandleAction = useDebouncedCallback((action: string) => {
         handleAction(action);

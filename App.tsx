@@ -387,6 +387,11 @@ export const AIContext = createContext<AIContextType>({
     userApiKeyCount: 0,
     rotateKey: () => {},
     selectedModel: 'gemini-2.5-flash',
+    temperature: 0.9,
+    topK: 40,
+    topP: 0.95,
+    openAiBaseUrl: '',
+    openAiApiKey: '',
 });
 
 export default function App() {
@@ -448,6 +453,11 @@ export default function App() {
   }, [isUsingDefaultKey, userApiKeys, activeUserApiKeyIndex]);
 
   const { ai, isAiReady, apiKeyError } = useMemo(() => {
+      // If OpenAI compatible endpoint is configured, treat AI as ready without needing a Gemini key
+      if (openAiBaseUrl.trim()) {
+        console.debug('[App] OpenAI endpoint configured, AI is ready without Gemini key.');
+        return { ai: null, isAiReady: true, apiKeyError: null };
+      }
       if (!activeKey) {
         return {
           ai: null,
@@ -462,7 +472,7 @@ export default function App() {
         console.error("Không thể khởi tạo GoogleGenAI:", e);
         return { ai: null, isAiReady: false, apiKeyError: `Lỗi khởi tạo AI: ${e.message}` };
       }
-  }, [activeKey]);
+  }, [activeKey, openAiBaseUrl]);
   
   // --- Quản lý API Key ---
   const handleSaveApiKeys = (newKeys: string[]) => {
@@ -955,7 +965,7 @@ Mô tả ngoại hình phải phù hợp với bối cảnh và tính cách, t�
   }
 
   return (
-    <AIContext.Provider value={{ ai, isAiReady, apiKeyError, isUsingDefaultKey, userApiKeyCount: userApiKeys.length, rotateKey: handleRotateKey, selectedModel: selectedAiModel, temperature: aiTemperature, topK: aiTopK, topP: aiTopP }}>
+    <AIContext.Provider value={{ ai, isAiReady, apiKeyError, isUsingDefaultKey, userApiKeyCount: userApiKeys.length, rotateKey: handleRotateKey, selectedModel: selectedAiModel, temperature: aiTemperature, topK: aiTopK, topP: aiTopP, openAiBaseUrl, openAiApiKey }}>
       <style>{`
         .am-kim {
             background: linear-gradient(135deg, #ca8a04, #eab308, #fde047);
