@@ -14,7 +14,10 @@ export const ApiSettingsModal: React.FC<{
     topK: number;
     topP: number;
     onAiSettingsChange: (settings: { temperature: number; topK: number; topP: number }) => void;
-}> = ({ isOpen, onClose, userApiKeys, isUsingDefault, onSave, selectedModel, onModelChange, temperature, topK, topP, onAiSettingsChange }) => {
+    openAiBaseUrl: string;
+    openAiApiKey: string;
+    onOpenAiSettingsSave: (baseUrl: string, apiKey: string) => void;
+}> = ({ isOpen, onClose, userApiKeys, isUsingDefault, onSave, selectedModel, onModelChange, temperature, topK, topP, onAiSettingsChange, openAiBaseUrl, openAiApiKey, onOpenAiSettingsSave }) => {
     if (!isOpen) return null;
     
     const [keys, setKeys] = useState<string[]>(userApiKeys);
@@ -22,6 +25,11 @@ export const ApiSettingsModal: React.FC<{
     const [currentTemperature, setCurrentTemperature] = useState<number>(temperature);
     const [currentTopK, setCurrentTopK] = useState<number>(topK);
     const [currentTopP, setCurrentTopP] = useState<number>(topP);
+    const [currentOpenAiBaseUrl, setCurrentOpenAiBaseUrl] = useState<string>(openAiBaseUrl);
+    const [currentOpenAiApiKey, setCurrentOpenAiApiKey] = useState<string>(openAiApiKey);
+    const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+    const [isFetchingModels, setIsFetchingModels] = useState<boolean>(false);
+    const [fetchModelError, setFetchModelError] = useState<string | null>(null);
 
     const handleKeyChange = (index: number, value: string) => {
         const newKeys = [...keys];
@@ -38,6 +46,43 @@ export const ApiSettingsModal: React.FC<{
         setKeys(newKeys);
     };
 
+    const handleFetchModels = async () => {
+        const baseUrl = currentOpenAiBaseUrl.trim().replace(/\/$/, '');
+        if (!baseUrl) {
+            setFetchModelError('Vui lòng nhập API URL trước.');
+            console.debug('[OpenAI Fetch] baseUrl is empty, aborting.');
+            return;
+        }
+        setIsFetchingModels(true);
+        setFetchModelError(null);
+        console.debug('[OpenAI Fetch] Fetching models from:', baseUrl);
+        try {
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (currentOpenAiApiKey.trim()) {
+                headers['Authorization'] = `Bearer ${currentOpenAiApiKey.trim()}`;
+            }
+            const response = await fetch(`${baseUrl}/v1/models`, { headers });
+            if (!response.ok) {
+                const errText = await response.text();
+                console.debug('[OpenAI Fetch] Error response:', response.status, errText);
+                throw new Error(`HTTP ${response.status}: ${errText}`);
+            }
+            const data = await response.json();
+            const modelIds: string[] = (data.data ?? []).map((m: { id: string }) => m.id).filter(Boolean);
+            console.debug('[OpenAI Fetch] Models fetched:', modelIds);
+            setFetchedModels(modelIds);
+            if (modelIds.length === 0) {
+                setFetchModelError('Không tìm thấy model nào từ endpoint này.');
+            }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.debug('[OpenAI Fetch] Fetch failed:', msg);
+            setFetchModelError(`Lỗi khi fetch: ${msg}`);
+        } finally {
+            setIsFetchingModels(false);
+        }
+    };
+
     const handleSaveClick = () => {
         onSave(keys);
         onModelChange(currentModel);
@@ -46,6 +91,8 @@ export const ApiSettingsModal: React.FC<{
             topK: currentTopK,
             topP: currentTopP
         });
+        onOpenAiSettingsSave(currentOpenAiBaseUrl.trim(), currentOpenAiApiKey.trim());
+        console.debug('[ApiSettingsModal] Saved. OpenAI baseUrl:', currentOpenAiBaseUrl.trim(), 'hasKey:', !!currentOpenAiApiKey.trim());
         onClose();
     };
 
@@ -170,6 +217,101 @@ export const ApiSettingsModal: React.FC<{
                             Nếu có nhiều key, hệ thống sẽ tự động chuyển khi gặp lỗi giới hạn.
                         </p>
                         {!isUsingDefault && <p className="text-xs text-green-500 dark:text-green-400 mt-2 px-1 text-center">Đang hoạt động</p>}
+                    </div>
+
+                    {/* OpenAI Compatible Endpoint Section */}
+                    <div className="border border-slate-200 dark:border-slate-600 rounded-lg p-4 space-y-3">
+                        <p className="font-semibold text-sm text-slate-800 dark:text-gray-300">OpenAI Compatible Endpoint</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Kết nối với bất kỳ API tương thích OpenAI (LM Studio, Ollama, OpenRouter, v.v.)
+                        </p>
+
+                        {/* Base URL Input */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700 dark:text-gray-300">API Base URL</label>
+                            <input
+                                type="text"
+                                placeholder="https://api.openai.com hoặc http://localhost:1234"
+                                value={currentOpenAiBaseUrl}
+                                onChange={(e) => {
+                                    setCurrentOpenAiBaseUrl(e.target.value);
+                                    setFetchedModels([]);
+                                    setFetchModelError(null);
+                                    console.debug('[OpenAI Input] baseUrl changed:', e.target.value);
+                                }}
+                                className="w-full bg-slate-100 dark:bg-[#373c5a] border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+
+                        {/* API Key Input */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-700 dark:text-gray-300">API Key (tuỳ chọn)</label>
+                            <input
+                                type="password"
+                                placeholder="sk-... (để trống nếu không cần)"
+                                value={currentOpenAiApiKey}
+                                onChange={(e) => {
+                                    setCurrentOpenAiApiKey(e.target.value);
+                                    console.debug('[OpenAI Input] apiKey changed (length):', e.target.value.length);
+                                }}
+                                className="w-full bg-slate-100 dark:bg-[#373c5a] border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm text-slate-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+
+                        {/* Fetch Models Button */}
+                        <button
+                            onClick={handleFetchModels}
+                            disabled={isFetchingModels || !currentOpenAiBaseUrl.trim()}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-500 disabled:cursor-not-allowed rounded-md text-white text-sm font-semibold transition-colors"
+                        >
+                            {isFetchingModels ? (
+                                <>
+                                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                    </svg>
+                                    Đang tải models...
+                                </>
+                            ) : (
+                                <>
+                                    <SparklesIcon className="w-4 h-4" />
+                                    Fetch Models từ Endpoint
+                                </>
+                            )}
+                        </button>
+
+                        {/* Fetch Error */}
+                        {fetchModelError && (
+                            <p className="text-xs text-red-500 dark:text-red-400 px-1">{fetchModelError}</p>
+                        )}
+
+                        {/* Fetched Models Dropdown */}
+                        {fetchedModels.length > 0 && (
+                            <div className="space-y-1">
+                                <label className="text-xs font-medium text-slate-700 dark:text-gray-300">Chọn Model từ Endpoint:</label>
+                                <select
+                                    value={currentModel}
+                                    onChange={(e) => {
+                                        setCurrentModel(e.target.value);
+                                        console.debug('[OpenAI Fetch] Model selected from fetched list:', e.target.value);
+                                    }}
+                                    className="w-full px-4 py-2.5 bg-white dark:bg-[#373c5a] border border-slate-300 dark:border-slate-600 rounded-md text-slate-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75"
+                                >
+                                    {fetchedModels.map((modelId) => (
+                                        <option key={modelId} value={modelId}>{modelId}</option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-green-500 dark:text-green-400 px-1">
+                                    ✓ Đã tải {fetchedModels.length} model từ endpoint
+                                </p>
+                            </div>
+                        )}
+
+                        {currentOpenAiBaseUrl.trim() && (
+                            <p className="text-xs text-cyan-500 dark:text-cyan-400 px-1 text-center">
+                                Endpoint đã được cấu hình
+                            </p>
+                        )}
                     </div>
                     
                     </div>
